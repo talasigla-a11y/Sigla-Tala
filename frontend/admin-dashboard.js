@@ -2,7 +2,7 @@ const toast = document.getElementById('toast');
 const logOutBtn = document.getElementById('logOutBtn');
 const LOGIN_URL = 'login.html';
 const PATIENT_DASHBOARD_URL = 'patient-dashboard.html';
-const API_BASE_URL = window.SIGLA_TALA_API_URL || 'http://localhost:3000';
+const API_BASE_URL = window.SIGLA_TALA_API_URL || 'https://sigla-tala-08i8.onrender.com';
 const INACTIVITY_TIMEOUT_MS = 10 * 60 * 1000;
 
 function clearAuthSession() {

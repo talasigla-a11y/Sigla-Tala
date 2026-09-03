@@ -2,7 +2,7 @@
 // SIGLA TALA - AUTHENTICATION JS
 // ===============================
 
-const API_BASE_URL = window.SIGLA_TALA_API_URL || "http://localhost:3000";
+const API_BASE_URL = window.SIGLA_TALA_API_URL || "https://sigla-tala-08i8.onrender.com";
 
 const API_URL = `${API_BASE_URL}/api/auth`;
 const ADMIN_DASHBOARD_URL = "admin-dashboard.html";
