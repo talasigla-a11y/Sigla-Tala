@@ -1,0 +1,30 @@
+services:
+  - type: web
+    name: sigla-tala-backend
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: node server.js
+    envVars:
+      - key: PORT
+        value: 3000
+      - key: DB_HOST
+        fromDatabase:
+          name: mysql
+          property: host
+      - key: DB_USER
+        fromDatabase:
+          name: mysql
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: mysql
+          property: password
+      - key: DB_NAME
+        fromDatabase:
+          name: mysql
+          property: database
+      - key: DB_PORT
+        value: 3306
+      - key: ALLOWED_ORIGINS
+        value: https://sigla-tala.netlify.app

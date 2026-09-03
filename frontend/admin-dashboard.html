@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sigla Tala — Admin Portal</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body class="app-active">
+ 
+  <!-- ===================== APP HEADER ===================== -->
+  <header class="app-header" id="appHeader">
+    <div class="app-header-inner">
+      <div class="brand">
+        <div class="logo logo-sm">S</div>
+        <span class="brand-name">Sigla Tala</span>
+      </div>
+ 
+      <div class="user-menu" id="userMenu">
+        <button class="user-menu-trigger" id="userMenuTrigger" aria-haspopup="true" aria-expanded="false">
+          <svg class="icon icon-invert" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="8" r="3.4"/><path d="M4.5 20c1.4-3.6 4.4-5.6 7.5-5.6s6.1 2 7.5 5.6"/></svg>
+          <span id="userMenuName">Admin</span>
+          <svg class="icon icon-invert icon-chevron" id="userMenuChevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 9l6 6 6-6"/></svg>
+        </button>
+ 
+        <div class="user-dropdown hidden" id="userDropdown">
+          <div class="user-dropdown-header">
+            <div class="user-dropdown-name" id="dropdownName">Admin</div>
+            <div class="user-dropdown-email" id="dropdownEmail">—</div>
+          </div>
+          <div class="user-dropdown-divider"></div>
+          <button class="user-dropdown-item" data-view="dashboard">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="8" rx="1.5"/><rect x="3" y="13" width="8" height="8" rx="1.5"/><rect x="13" y="13" width="8" height="8" rx="1.5"/></svg>
+            Dashboard
+          </button>
+          <button class="user-dropdown-item" data-view="appointment">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
+            Appointment
+          </button>
+          <button class="user-dropdown-item" data-view="account">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="8" r="3.4"/><path d="M4.5 20c1.4-3.6 4.4-5.6 7.5-5.6s6.1 2 7.5 5.6"/></svg>
+            Account Overview
+          </button>
+          <button class="user-dropdown-item" data-view="file">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M8 3h6l4 4v13a1 1 0 01-1 1H8a1 1 0 01-1-1V4a1 1 0 011-1z"/><path d="M14 3v4h4"/></svg>
+            File Management
+          </button>
+
+          <div class="user-dropdown-divider"></div>
+
+          <button class="user-dropdown-item item-danger" id="logOutBtn" type="button">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M9 4H6a2 2 0 00-2 2v12a2 2 0 002 2h3M16 16l4-4-4-4M20 12H9"/></svg>
+            Log Out
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+ 
+  <!-- ===================== APP CONTENT ===================== -->
+  <main class="app-content" id="appContent">
+ 
+    <!-- ---------- Dashboard view ---------- -->
+    <section class="view" id="dashboardView">
+      <div class="view-title-row">
+        <h2 class="view-title"><svg class="icon icon-title" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 11l16-6-4 16-5-6-6-1z"/><path d="M9.5 14.5L21 5"/></svg>Center Announcements</h2>
+        <button type="button" class="btn-primary btn-inline" id="newAnnouncementBtn">
+          <svg class="icon icon-invert" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+          New Announcement
+        </button>
+      </div>
+ 
+      <div class="announcement-modal hidden" id="announcementFormPanel">
+        <div class="announcement-modal-card">
+          <button type="button" class="modal-close" id="annCloseBtn" aria-label="Close announcement form">✕</button>
+          <h3 class="panel-subtitle">Post Announcement</h3>
+          <form id="announcementForm" novalidate>
+            <div class="field">
+              <label for="annTitle">Title</label>
+              <input type="text" id="annTitle" required>
+              <span class="error-message" id="annTitleError"></span>
+            </div>
+            <div class="field">
+              <label for="annContent">Content</label>
+              <textarea id="annContent" rows="4" required></textarea>
+              <span class="error-message" id="annContentError"></span>
+            </div>
+            <div class="form-actions">
+              <button type="button" class="btn-secondary" id="cancelAnnouncementBtn">Cancel</button>
+              <button type="submit" class="btn-primary btn-compact">Post</button>
+            </div>
+          </form>
+        </div>
+      </div>
+ 
+      <div class="announcement-grid" id="announcementGrid"></div>
+    </section>
+ 
+    <!-- ---------- Appointment Calendar view ---------- -->
+    <section class="view hidden" id="appointmentView">
+      <div class="appointment-layout">
+        <div class="panel" id="adminCalendarPanel">
+          <div class="calendar-header-row">
+            <h2 class="view-title"><svg class="icon icon-title" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>Appointment Calendar</h2>
+            <div class="calendar-stats">
+              <div class="stat-pill stat-pending">
+                <span class="stat-label">Pending</span>
+                <span class="stat-value" id="statPending">0</span>
+              </div>
+              <div class="stat-pill stat-accepted">
+                <span class="stat-label">Accepted</span>
+                <span class="stat-value" id="statAccepted">0</span>
+              </div>
+            </div>
+          </div>
+          <p class="field-hint calendar-hint">Click a date to view scheduled patients.</p>
+
+          <div class="calendar-nav">
+            <button type="button" class="cal-nav-btn" id="calPrevBtn" aria-label="Previous month">
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 6l-6 6 6 6"/></svg>
+            </button>
+            <span class="calendar-month-label" id="calMonthLabel">July 2026</span>
+            <button type="button" class="cal-nav-btn" id="calNextBtn" aria-label="Next month">
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg>
+            </button>
+          </div>
+
+          <div class="calendar-weekdays">
+            <span>SUN</span><span>MON</span><span>TUE</span><span>WED</span><span>THU</span><span>FRI</span><span>SAT</span>
+          </div>
+          <div class="calendar-grid" id="calendarGrid"></div>
+
+          <div class="calendar-legend">
+            <span class="legend-item"><span class="legend-dot dot-pending"></span>Pending</span>
+            <span class="legend-item"><span class="legend-dot dot-accepted"></span>Accepted</span>
+          </div>
+        </div>
+
+        <div class="panel panel-side" id="calendarSidePanel">
+          <div class="calendar-day-detail hidden" id="calendarDayDetail">
+            <h3 class="panel-subtitle" id="calendarDayTitle">Scheduled Patients</h3>
+            <div id="calendarDayList"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+ 
+    <!-- ---------- Account Overview view ---------- -->
+    <section class="view hidden" id="accountView">
+      <div class="panel panel-wide">
+        <h2 class="view-title"><svg class="icon icon-title" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="8" r="3.4"/><path d="M4.5 20c1.4-3.6 4.4-5.6 7.5-5.6s6.1 2 7.5 5.6"/></svg>Account Overview</h2>
+ 
+        <form id="accountForm" novalidate>
+          <div class="field-pair">
+            <div class="field">
+              <label for="accFullName">Full Name</label>
+              <input type="text" id="accFullName">
+            </div>
+            <div class="field">
+              <label for="accEmail">Email Address</label>
+              <input type="email" id="accEmail" readonly>
+            </div>
+          </div>
+ 
+          <div class="field-trio">
+            <div class="field">
+              <label for="accDob">Date of Birth</label>
+              <input type="date" id="accDob">
+            </div>
+            <div class="field">
+              <label for="accAge">Age</label>
+              <input type="number" id="accAge" min="0" max="120">
+            </div>
+            <div class="field">
+              <label for="accGender">Gender</label>
+              <select id="accGender">
+                <option value="" disabled selected>Select...</option>
+                <option value="female">Female</option>
+                <option value="male">Male</option>
+                <option value="other">Other</option>
+                <option value="prefer-not-to-say">Prefer not to say</option>
+              </select>
+            </div>
+          </div>
+ 
+          <div class="field-pair">
+            <div class="field">
+              <label for="accAddress">House Address</label>
+              <input type="text" id="accAddress" placeholder="123 Street Name">
+            </div>
+            <div class="field">
+              <label for="accBarangay">Barangay</label>
+              <input type="text" id="accBarangay" placeholder="Brgy. Health Center">
+            </div>
+          </div>
+ 
+          <hr class="divider">
+          <button type="submit" class="btn-primary">Save Profile</button>
+        </form>
+      </div>
+ 
+      <div class="panel panel-wide">
+        <h2 class="view-title"><svg class="icon icon-title" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3l7 3v6c0 4.4-3 8-7 9-4-1-7-4.6-7-9V6l7-3z"/></svg>Account Role</h2>
+        <div class="role-card">
+          <div>
+            <div class="role-card-label">Current Role</div>
+            <div class="role-card-value">Admin</div>
+          </div>
+          <span class="status-pill status-approved">Approved</span>
+        </div>
+      </div>
+    </section>
+ 
+    <!-- ---------- File Management view ---------- -->
+    <section class="view hidden" id="fileView">
+      <h2 class="view-title"><svg class="icon icon-title" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M8 3h6l4 4v13a1 1 0 01-1 1H8a1 1 0 01-1-1V4a1 1 0 011-1z"/><path d="M14 3v4h4"/></svg>File Management &amp; Reports</h2>
+ 
+      <div class="tab-row">
+        <button type="button" class="tab-btn active" data-tab="pending">Pending Reports (<span id="pendingReportsCount">0</span>)</button>
+        <button type="button" class="tab-btn" data-tab="medical">Medical Reports</button>
+      </div>
+ 
+      <div class="tab-panel" id="pendingReportsTab">
+        <div class="panel">
+          <h3 class="panel-subtitle">Accepted Appointments Awaiting Reports</h3>
+          <hr class="divider divider-tight">
+          <div id="pendingReportsList">
+            <p class="empty-state">No pending reports to encode.</p>
+          </div>
+        </div>
+      </div>
+ 
+      <div class="tab-panel hidden" id="medicalReportsTab">
+        <div class="panel">
+          <div class="panel-header-row">
+            <h3 class="panel-subtitle">Encoded Medical Reports</h3>
+            <div class="search-box">
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+              <input type="text" id="reportSearch" placeholder="Search reports...">
+            </div>
+          </div>
+          <div id="medicalReportsList" class="dashed-panel">
+            <p class="empty-state">No medical reports encoded yet.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="announcement-modal hidden" id="medicalReportFormPanel">
+        <div class="announcement-modal-card">
+          <button type="button" class="modal-close" id="closeMedicalReportBtn" aria-label="Close medical report form">✕</button>
+          <h3 class="panel-subtitle">Encode Medical Report</h3>
+          <p id="reportPatientContext" class="field-hint"></p>
+          <form id="medicalReportForm" novalidate>
+            <input type="hidden" id="reportAppointmentId">
+            <input type="hidden" id="reportUserId">
+            <div class="field-pair">
+              <div class="field"><label for="reportDoctorName">Doctor / Admin Name</label><input id="reportDoctorName" required></div>
+              <div class="field"><label for="reportDate">Date Recorded</label><input type="date" id="reportDate" required></div>
+            </div>
+            <div class="field"><label for="reportDiagnostic">Diagnostic</label><input id="reportDiagnostic" required></div>
+            <div class="field"><label for="reportNotes">Medical Notes</label><textarea id="reportNotes" rows="5" required></textarea></div>
+            <div class="form-actions"><button type="button" class="btn-secondary" id="cancelMedicalReportBtn">Cancel</button><button type="submit" class="btn-primary">Save Medical Report</button></div>
+          </form>
+        </div>
+      </div>
+    </section>
+ 
+  </main>
+ 
+  <!-- Toast notification -->
+  <div class="toast" id="toast"></div>
+ 
+  <script src="admin-dashboard.js"></script>
+</body>
+</html>
