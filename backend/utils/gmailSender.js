@@ -4,6 +4,33 @@ require("dotenv").config({ path: require("path").join(__dirname, "..", ".env") }
 
 const emailUser = String(process.env.EMAIL_USER || "").trim();
 const emailPass = String(process.env.EMAIL_PASS || "").replace(/\s+/g, "").trim();
+const resendApiKey = String(process.env.RESEND_API_KEY || "").trim();
+const emailFrom = String(process.env.EMAIL_FROM || emailUser).trim();
+
+const sendWithResend = async ({ to, subject, html, text }) => {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000);
+
+    try {
+        const response = await fetch("https://api.resend.com/emails", {
+            method: "POST",
+            headers: {
+                "Authorization": `Bearer ${resendApiKey}`,
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ from: emailFrom, to, subject, html, text }),
+            signal: controller.signal
+        });
+
+        const data = await response.json().catch(() => ({}));
+
+        if (!response.ok) {
+            throw new Error(data.message || `Resend request failed (${response.status}).`);
+        }
+    } finally {
+        clearTimeout(timeout);
+    }
+};
 
 const createTransporter = () => {
     if (!emailUser || !emailPass) {
@@ -31,6 +58,13 @@ const createTransporter = () => {
 };
 
 const sendEmail = async ({ to, subject, html }) => {
+    const text = html.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+
+    if (resendApiKey) {
+        await sendWithResend({ to, subject, html, text });
+        return;
+    }
+
     const transporter = createTransporter();
 
     await transporter.sendMail({
@@ -38,7 +72,7 @@ const sendEmail = async ({ to, subject, html }) => {
         to,
         subject,
         html,
-        text: html.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim()
+        text
     });
 };
 
