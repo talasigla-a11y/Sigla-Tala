@@ -646,6 +646,9 @@ if (signinForm) {
             // LOGIN REQUEST
             // ===============================
 
+            const controller = new AbortController();
+            const requestTimeout = setTimeout(() => controller.abort(), 20000);
+
             const response =
                 await fetch(
                     `${API_URL}/login`,
@@ -665,10 +668,13 @@ if (signinForm) {
                             password:
                                 password.value
 
-                        })
+                        }),
+                        signal: controller.signal
 
                     }
                 );
+
+            clearTimeout(requestTimeout);
 
 
             const data =
@@ -821,7 +827,9 @@ if (signinForm) {
             );
 
             showToast(
-                "Cannot connect to the server.",
+                error.name === "AbortError" ?
+                    "The server took too long to respond. Please try again." :
+                    "Cannot connect to the server.",
                 "error"
             );
 
