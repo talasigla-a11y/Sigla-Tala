@@ -10,11 +10,19 @@ const createTransporter = () => {
         throw new Error("SMTP email credentials are not configured.");
     }
 
+    const smtpPort = Number(process.env.SMTP_PORT) || 587;
+
     return nodemailer.createTransport({
-        service: "gmail",
+        host: process.env.SMTP_HOST || "smtp.gmail.com",
+        port: smtpPort,
+        secure: smtpPort === 465,
+        requireTLS: smtpPort === 587,
         connectionTimeout: 15000,
         greetingTimeout: 15000,
         socketTimeout: 15000,
+        tls: {
+            minVersion: "TLSv1.2"
+        },
         auth: {
             user: emailUser,
             pass: emailPass
