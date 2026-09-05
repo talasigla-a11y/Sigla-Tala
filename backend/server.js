@@ -17,13 +17,24 @@ const verifyToken = require("./middleware/authMiddleware");
 
 const app = express();
 
-const allowedOrigins = (process.env.ALLOWED_ORIGINS || "http://localhost:5500,http://127.0.0.1:5500").split(",").map((origin) => origin.trim()).filter(Boolean);
+const allowedOrigins = (process.env.ALLOWED_ORIGINS || "http://localhost:5500,http://127.0.0.1:5500,https://sigla-tala.netlify.app,https://siglatala.netlify.app,https://siglata.netlify.app").split(",").map((origin) => origin.trim()).filter(Boolean);
+
+function isAllowedOrigin(origin) {
+    if (!origin) return true;
+
+    if (allowedOrigins.includes(origin)) {
+        return true;
+    }
+
+    return /^(https?:\/\/)(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin) ||
+        /^(https?:\/\/)([a-z0-9-]+\.)*netlify\.app$/.test(origin);
+}
 
 // ================= CORS =================
 
 app.use(cors({
     origin: function (origin, callback) {
-        if (!origin || allowedOrigins.includes(origin)) {
+        if (isAllowedOrigin(origin)) {
             callback(null, true);
             return;
         }
