@@ -686,6 +686,7 @@ if (signinForm) {
             if (!response.ok) {
 
                 showToast(
+                    data.error ||
                     data.message ||
                     "Login failed.",
                     "error"
