@@ -1,5 +1,76 @@
 const db = require("../database/db");
 
+const createTable = (callback) => {
+    const sql = `
+        CREATE TABLE IF NOT EXISTS users (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            fullname VARCHAR(255) NOT NULL,
+            age INT NOT NULL,
+            gender VARCHAR(50) NOT NULL,
+            email VARCHAR(255) NOT NULL UNIQUE,
+            role VARCHAR(50) DEFAULT 'patient',
+            password VARCHAR(255) NOT NULL,
+            otp VARCHAR(255) NULL,
+            is_verified TINYINT(1) DEFAULT 0,
+            login_otp VARCHAR(255) NULL,
+            login_otp_expires DATETIME NULL,
+            reset_otp VARCHAR(255) NULL,
+            reset_otp_expires DATETIME NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        )
+    `;
+
+    db.query(sql, callback);
+};
+
+const ensureSchema = (callback) => {
+    const checks = [
+        ["fullname", "ALTER TABLE users ADD COLUMN IF NOT EXISTS fullname VARCHAR(255) NOT NULL DEFAULT ''"],
+        ["age", "ALTER TABLE users ADD COLUMN IF NOT EXISTS age INT NOT NULL DEFAULT 0"],
+        ["gender", "ALTER TABLE users ADD COLUMN IF NOT EXISTS gender VARCHAR(50) NOT NULL DEFAULT 'other'"],
+        ["email", "ALTER TABLE users ADD COLUMN IF NOT EXISTS email VARCHAR(255) NOT NULL DEFAULT ''"],
+        ["role", "ALTER TABLE users ADD COLUMN IF NOT EXISTS role VARCHAR(50) DEFAULT 'patient'"],
+        ["password", "ALTER TABLE users ADD COLUMN IF NOT EXISTS password VARCHAR(255) NOT NULL DEFAULT ''"],
+        ["otp", "ALTER TABLE users ADD COLUMN IF NOT EXISTS otp VARCHAR(255) NULL"],
+        ["is_verified", "ALTER TABLE users ADD COLUMN IF NOT EXISTS is_verified TINYINT(1) DEFAULT 0"],
+        ["login_otp", "ALTER TABLE users ADD COLUMN IF NOT EXISTS login_otp VARCHAR(255) NULL"],
+        ["login_otp_expires", "ALTER TABLE users ADD COLUMN IF NOT EXISTS login_otp_expires DATETIME NULL"],
+        ["reset_otp", "ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_otp VARCHAR(255) NULL"],
+        ["reset_otp_expires", "ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_otp_expires DATETIME NULL"]
+    ];
+
+    createTable((createErr) => {
+        if (createErr) {
+            callback(createErr);
+            return;
+        }
+
+        let index = 0;
+
+        const runNext = () => {
+            if (index >= checks.length) {
+                callback(null);
+                return;
+            }
+
+            const [, sql] = checks[index];
+            index += 1;
+
+            db.query(sql, (err) => {
+                if (err) {
+                    callback(err);
+                    return;
+                }
+
+                runNext();
+            });
+        };
+
+        runNext();
+    });
+};
+
 
 // ========================================
 // FIND USER BY EMAIL
@@ -239,6 +310,8 @@ const verifyUser = (email, callback) => {
 // EXPORT
 // ========================================
 module.exports = {
+    createTable,
+    ensureSchema,
     findUserByEmail,
     getUserByEmail,
     createUser,

@@ -2,6 +2,8 @@ require("dotenv").config({ path: require("path").join(__dirname, ".env") });
 
 const express = require("express");
 const cors = require("cors");
+const helmet = require("helmet");
+const rateLimit = require("express-rate-limit");
 
 const db = require("./database/db");
 
@@ -12,10 +14,17 @@ const announcementModel = require("./models/announcementModel");
 const medicalReportRoutes = require("./routes/medicalReportRoutes");
 const medicalReportModel = require("./models/medicalReportModel");
 const appointmentModel = require("./models/appointmentModel");
+const userModel = require("./models/userModel");
 
 const verifyToken = require("./middleware/authMiddleware");
 
 const app = express();
+
+const requiredEnv = ["JWT_SECRET"];
+const missingEnv = requiredEnv.filter((key) => !process.env[key] || String(process.env[key]).trim() === "");
+if (missingEnv.length > 0) {
+    console.warn(`⚠️ Missing required environment variables: ${missingEnv.join(", ")}`);
+}
 
 const allowedOrigins = (process.env.ALLOWED_ORIGINS || "http://localhost:5500,http://127.0.0.1:5500,https://sigla-tala.netlify.app,https://siglatala.netlify.app,https://siglata.netlify.app").split(",").map((origin) => origin.trim()).filter(Boolean);
 
@@ -44,10 +53,40 @@ app.use(cors({
     credentials: true
 }));
 
+app.disable("x-powered-by");
+app.use(helmet({
+    crossOriginResourcePolicy: { policy: "cross-origin" },
+    contentSecurityPolicy: false
+}));
+
+const apiLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 200,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: {
+        success: false,
+        message: "Too many requests. Please try again later."
+    }
+});
+
+const authLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 20,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: {
+        success: false,
+        message: "Too many login attempts. Please try again later."
+    }
+});
 
 // ================= MIDDLEWARE =================
 
-app.use(express.json());
+app.use(apiLimiter);
+app.use("/api/auth", authLimiter);
+app.use(express.json({ limit: "1mb" }));
+app.use(express.urlencoded({ extended: true, limit: "1mb" }));
 
 
 // ================= ROUTES =================
@@ -64,6 +103,13 @@ app.use("/api/medical-reports", medicalReportRoutes);
 
 app.get("/", (req, res) => {
     res.send("Backend Working");
+});
+
+app.use((req, res) => {
+    res.status(404).json({
+        success: false,
+        message: "Route not found."
+    });
 });
 
 // ================= PROTECTED DASHBOARD =================
@@ -83,14 +129,20 @@ app.get("/dashboard", verifyToken, (req, res) => {
 
 const port = Number(process.env.PORT) || 3000;
 
-appointmentModel.addFileColumns((fileErr) => {
-    if (fileErr) console.error("APPOINTMENT FILE COLUMNS ERROR:", fileErr);
-    medicalReportModel.createTable((reportErr) => {
-        if (reportErr) console.error("MEDICAL REPORT TABLE ERROR:", reportErr);
-        announcementModel.createTable((err) => {
-            if (err) console.error("ANNOUNCEMENTS TABLE ERROR:", err);
-            app.listen(port, () => {
-                console.log(`✅ Server running on port ${port}`);
+userModel.ensureSchema((userErr) => {
+    if (userErr) {
+        console.error("USER TABLE SCHEMA ERROR:", userErr);
+    }
+
+    appointmentModel.addFileColumns((fileErr) => {
+        if (fileErr) console.error("APPOINTMENT FILE COLUMNS ERROR:", fileErr);
+        medicalReportModel.createTable((reportErr) => {
+            if (reportErr) console.error("MEDICAL REPORT TABLE ERROR:", reportErr);
+            announcementModel.createTable((err) => {
+                if (err) console.error("ANNOUNCEMENTS TABLE ERROR:", err);
+                app.listen(port, () => {
+                    console.log(`✅ Server running on port ${port}`);
+                });
             });
         });
     });

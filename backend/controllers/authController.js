@@ -3,10 +3,29 @@ const jwt = require("jsonwebtoken");
 const userModel = require("../models/userModel");
 const sendOTP = require("../utils/sendEmail");
 
+const sanitizeEmail = (value) => String(value || "").trim().toLowerCase();
+const sanitizeName = (value) => String(value || "").trim();
+
+const normalizeRole = (input) => {
+    const role = String(input || "patient").trim();
+    return ["admin", "patient"].includes(role.toLowerCase()) ? role.toLowerCase() : "patient";
+};
+
 // ================= REGISTER =================
 const register = async (req, res) => {
     try {
-        const { fullname, age, gender, email, password } = req.body;
+        const fullname = sanitizeName(req.body.fullname);
+        const age = Number(req.body.age);
+        const gender = sanitizeName(req.body.gender);
+        const email = sanitizeEmail(req.body.email);
+        const password = String(req.body.password || "");
+
+        if (!fullname || !email || !password || !gender || !Number.isInteger(age) || age < 0 || age > 120) {
+            return res.status(400).json({
+                success: false,
+                message: "Please provide valid full name, age, gender, email, and password."
+            });
+        }
 
         userModel.findUserByEmail(email, async (err, results) => {
 
@@ -25,20 +44,18 @@ const register = async (req, res) => {
             }
 
             const otp = Math.floor(100000 + Math.random() * 900000).toString();
-
             const hashedPassword = await bcrypt.hash(password, 10);
 
-           userModel.createUser(
-    {
-        fullname,
-        age,
-        gender,
-        email,
-        role: "patient",
-        password: hashedPassword,
-        otp,
-        is_verified: 0
-    },
+            userModel.createUser({
+                fullname,
+                age,
+                gender,
+                email,
+                role: "patient",
+                password: hashedPassword,
+                otp,
+                is_verified: 0
+            },
                 async (err) => {
 
                     if (err) {
@@ -85,7 +102,15 @@ const register = async (req, res) => {
 // ================= LOGIN =================
 const login = (req, res) => {
 
-    const { email, password } = req.body;
+    const email = sanitizeEmail(req.body.email);
+    const password = String(req.body.password || "");
+
+    if (!email || !password) {
+        return res.status(400).json({
+            success: false,
+            message: "Email and password are required."
+        });
+    }
 
     userModel.getUserByEmail(email, async (err, results) => {
 
@@ -290,7 +315,9 @@ const forgotPassword = (req, res) => {
 
 const resetPassword = async (req, res) => {
 
-    const { email, otp, newPassword } = req.body;
+    const email = sanitizeEmail(req.body.email);
+    const otp = String(req.body.otp || "").trim();
+    const newPassword = String(req.body.newPassword || "");
 
     if (!email || !otp || !newPassword) {
         return res.status(400).json({
