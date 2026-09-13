@@ -1,5 +1,6 @@
 const db = require("./database/db");
 
+// Repairs legacy appointments whose status was stored as an empty string.
 // Fix existing empty status values to 'Pending'
 const sql = `UPDATE appointments SET status = 'Pending' WHERE status = ''`;
 

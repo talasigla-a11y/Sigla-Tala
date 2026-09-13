@@ -1,5 +1,7 @@
+// Creates the shared MySQL connection used by every model in the backend.
 const mysql = require("mysql2");
 
+// Reads database credentials from environment variables so secrets stay outside source control.
 const connection = mysql.createConnection({
     host: process.env.DB_HOST || "127.0.0.1",
     user: process.env.DB_USER || "root",
@@ -9,6 +11,7 @@ const connection = mysql.createConnection({
     ssl: process.env.DB_SSL === "true" ? { rejectUnauthorized: false } : undefined
 });
 
+// Opens the database connection when the server starts and reports connection failures.
 connection.connect((err) => {
     if (err) {
         console.error(err);

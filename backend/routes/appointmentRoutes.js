@@ -27,6 +27,7 @@ const upload = multer({
     }
 });
 
+// Creates an appointment after authenticating the patient and processing an optional attachment.
 // Create appointment
 router.post(
     "/",
@@ -35,6 +36,7 @@ router.post(
     appointmentController.createAppointment
 );
 
+// Returns only the appointments belonging to the authenticated patient.
 // Get logged-in user's appointments
 router.get(
     "/my-appointments",
@@ -42,6 +44,7 @@ router.get(
     appointmentController.getMyAppointments
 );
 
+// Admin endpoints require both a valid JWT and the admin role.
 // Get all appointments (admin only)
 router.get(
     "/admin/all-appointments",

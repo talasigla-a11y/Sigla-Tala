@@ -1,5 +1,6 @@
 const sendEmail = require("./gmailSender");
 
+// Builds the standard one-time-password message used by registration and login.
 const sendOTP = async (email, otp) => {
     await sendEmail({
         to: email,

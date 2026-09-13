@@ -3,15 +3,21 @@ const jwt = require("jsonwebtoken");
 const userModel = require("../models/userModel");
 const sendOTP = require("../utils/sendEmail");
 
+// Normalizes user input before it is compared with or stored in the database.
 const sanitizeEmail = (value) => String(value || "").trim().toLowerCase();
 const sanitizeName = (value) => String(value || "").trim();
 
+// Requires at least 8 characters, one uppercase letter, one number, and one allowed symbol.
+const isStrongPassword = (value) => /^(?=.*[A-Z])(?=.*\d)(?=.*[_*&%]).{8,}$/.test(value);
+
+// Restricts roles to the two application roles; public registration always creates patients.
 const normalizeRole = (input) => {
     const role = String(input || "patient").trim();
     return ["admin", "patient"].includes(role.toLowerCase()) ? role.toLowerCase() : "patient";
 };
 
 // ================= REGISTER =================
+// Creates a patient account, hashes the password, and sends an email-verification OTP.
 const register = async (req, res) => {
     try {
         const fullname = sanitizeName(req.body.fullname);
@@ -24,6 +30,13 @@ const register = async (req, res) => {
             return res.status(400).json({
                 success: false,
                 message: "Please provide valid full name, age, gender, email, and password."
+            });
+        }
+
+        if (!isStrongPassword(password)) {
+            return res.status(400).json({
+                success: false,
+                message: "Password must be at least 8 characters and include an uppercase letter, a number, and one of these symbols: _ * & %."
             });
         }
 
@@ -100,6 +113,7 @@ const register = async (req, res) => {
 };
 
 // ================= LOGIN =================
+// Verifies the password, creates a short-lived login OTP, and emails it to the user.
 const login = (req, res) => {
 
     const email = sanitizeEmail(req.body.email);
@@ -189,6 +203,7 @@ const login = (req, res) => {
 };
 
 // ================= REGISTER OTP =================
+// Confirms the registration OTP and marks the account as email-verified.
 const verifyOTP = (req, res) => {
 
     const { email, otp } = req.body;
@@ -238,6 +253,7 @@ const verifyOTP = (req, res) => {
 
 };
 
+// Starts password recovery by generating and emailing a time-limited reset OTP.
 const forgotPassword = (req, res) => {
 
     const { email } = req.body;
@@ -313,6 +329,7 @@ const forgotPassword = (req, res) => {
 
 };
 
+// Validates the reset OTP, hashes the new password, and clears the recovery code.
 const resetPassword = async (req, res) => {
 
     const email = sanitizeEmail(req.body.email);
@@ -326,10 +343,10 @@ const resetPassword = async (req, res) => {
         });
     }
 
-    if (String(newPassword).length < 6) {
+    if (!isStrongPassword(newPassword)) {
         return res.status(400).json({
             success: false,
-            message: "Password must be at least 6 characters long."
+            message: "Password must be at least 8 characters and include an uppercase letter, a number, and one of these symbols: _ * & %."
         });
     }
 
@@ -394,6 +411,7 @@ const resetPassword = async (req, res) => {
 
 };
 
+// Verifies the second login factor and returns a signed JWT for future API requests.
 const verifyLoginOTP = (req, res) => {
 
     const { email, otp } = req.body;
@@ -461,6 +479,7 @@ const verifyLoginOTP = (req, res) => {
 };
 
 // ================= UPDATE PROFILE =================
+// Updates editable profile fields for the user identified by the JWT.
 const updateProfile = (req, res) => {
     const fullname = String(req.body.fullname || "").trim();
     const age = Number(req.body.age);
@@ -496,6 +515,7 @@ const updateProfile = (req, res) => {
     });
 };
 
+// Returns the authenticated user's profile without exposing the password hash.
 const getProfile = (req, res) => {
     userModel.getProfileById(req.user.id, (err, results) => {
         if (err) {

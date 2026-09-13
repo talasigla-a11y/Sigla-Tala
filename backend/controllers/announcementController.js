@@ -1,5 +1,6 @@
 const announcementModel = require("../models/announcementModel");
 
+// Retrieves all announcements so dashboards can display current clinic updates.
 const getAnnouncements = (req, res) => {
     announcementModel.getAllAnnouncements((err, results) => {
         if (err) {
@@ -17,6 +18,7 @@ const getAnnouncements = (req, res) => {
     });
 };
 
+// Validates and saves a new announcement submitted by an administrator.
 const createAnnouncement = (req, res) => {
     const title = String(req.body.title || "").trim();
     const content = String(req.body.content || "").trim();
@@ -48,6 +50,7 @@ const createAnnouncement = (req, res) => {
     });
 };
 
+// Removes an announcement by ID after the admin requests deletion.
 const deleteAnnouncement = (req, res) => {
     announcementModel.deleteAnnouncement(req.params.id, (err, result) => {
         if (err) {

@@ -1,5 +1,6 @@
 const db = require("../database/db");
 
+// Creates the users table with authentication, role, and OTP fields.
 const createTable = (callback) => {
     const sql = `
         CREATE TABLE IF NOT EXISTS users (
@@ -24,6 +25,7 @@ const createTable = (callback) => {
     db.query(sql, callback);
 };
 
+// Upgrades older databases one column at a time while tolerating existing columns.
 const ensureSchema = (callback) => {
     const checks = [
         ["fullname", "ALTER TABLE users ADD COLUMN fullname VARCHAR(255) NOT NULL DEFAULT ''"],
@@ -75,6 +77,7 @@ const ensureSchema = (callback) => {
 // ========================================
 // FIND USER BY EMAIL
 // ========================================
+// Checks whether an email address is already registered.
 const findUserByEmail = (email, callback) => {
 
     const sql = "SELECT * FROM users WHERE email = ?";
@@ -86,6 +89,7 @@ const findUserByEmail = (email, callback) => {
 // ========================================
 // GET USER BY EMAIL
 // ========================================
+// Retrieves the complete user record needed by authentication flows.
 const getUserByEmail = (email, callback) => {
 
     const sql = "SELECT * FROM users WHERE email = ?";
@@ -97,6 +101,7 @@ const getUserByEmail = (email, callback) => {
 // ========================================
 // CREATE USER
 // ========================================
+// Inserts a new user with a hashed password and initial verification state.
 const createUser = (user, callback) => {
 
     const sql = `
@@ -134,6 +139,7 @@ const createUser = (user, callback) => {
 // ========================================
 // SAVE LOGIN OTP
 // ========================================
+// Stores the login OTP and its expiration timestamp.
 const saveLoginOTP = (email, otp, expires, callback) => {
 
     const sql = `
@@ -155,6 +161,7 @@ const saveLoginOTP = (email, otp, expires, callback) => {
 // ========================================
 // VERIFY LOGIN OTP
 // ========================================
+// Finds a matching, unexpired login OTP.
 const verifyLoginOTP = (email, otp, callback) => {
 
     const sql = `
@@ -176,6 +183,7 @@ const verifyLoginOTP = (email, otp, callback) => {
 // ========================================
 // CLEAR LOGIN OTP
 // ========================================
+// Removes a login OTP after successful verification.
 const clearLoginOTP = (email, callback) => {
 
     const sql = `
@@ -193,6 +201,7 @@ const clearLoginOTP = (email, callback) => {
 // ========================================
 // SAVE PASSWORD RESET OTP
 // ========================================
+// Stores a time-limited password recovery OTP.
 const savePasswordResetOTP = (email, otp, expires, callback) => {
 
     const sql = `
@@ -214,6 +223,7 @@ const savePasswordResetOTP = (email, otp, expires, callback) => {
 // ========================================
 // VERIFY PASSWORD RESET OTP
 // ========================================
+// Finds a matching, unexpired password recovery OTP.
 const verifyPasswordResetOTP = (email, otp, callback) => {
 
     const sql = `
@@ -235,6 +245,7 @@ const verifyPasswordResetOTP = (email, otp, callback) => {
 // ========================================
 // CLEAR PASSWORD RESET OTP
 // ========================================
+// Clears a recovery OTP after the password has been changed.
 const clearPasswordResetOTP = (email, callback) => {
 
     const sql = `
@@ -252,6 +263,7 @@ const clearPasswordResetOTP = (email, callback) => {
 // ========================================
 // UPDATE PASSWORD
 // ========================================
+// Replaces the stored password with a newly generated bcrypt hash.
 const updatePassword = (email, passwordHash, callback) => {
 
     const sql = `
@@ -264,6 +276,7 @@ const updatePassword = (email, passwordHash, callback) => {
     db.query(sql, [passwordHash, email], callback);
 };
 
+// Updates profile fields without changing authentication credentials.
 const updateProfile = (userId, fullname, age, gender, callback) => {
 
     const sql = `
@@ -278,6 +291,7 @@ const updateProfile = (userId, fullname, age, gender, callback) => {
     db.query(sql, [fullname, age, gender, userId], callback);
 };
 
+// Retrieves safe profile fields for the authenticated user's dashboard.
 const getProfileById = (userId, callback) => {
     const sql = `
         SELECT id, fullname, age, gender, email, role
@@ -292,6 +306,7 @@ const getProfileById = (userId, callback) => {
 // ========================================
 // VERIFY REGISTRATION EMAIL
 // ========================================
+// Marks a newly registered account as verified after OTP confirmation.
 const verifyUser = (email, callback) => {
 
     const sql = `

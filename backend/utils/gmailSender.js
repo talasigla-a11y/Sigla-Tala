@@ -1,8 +1,10 @@
 require("dotenv").config({ path: require("path").join(__dirname, "..", ".env") });
 
+// Email delivery uses Resend's HTTPS API, which works reliably from Render.
 const resendApiKey = String(process.env.RESEND_API_KEY || "").trim();
 const emailFrom = String(process.env.EMAIL_FROM || "").trim();
 
+// Sends one HTML email and throws a useful error when the provider rejects it.
 const sendEmail = async ({ to, subject, html }) => {
     if (!resendApiKey) {
         throw new Error("Resend API key is not configured.");

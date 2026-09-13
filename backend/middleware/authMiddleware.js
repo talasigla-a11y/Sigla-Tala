@@ -1,5 +1,7 @@
+// JWT is used to prove that a request belongs to a signed-in user.
 const jwt = require("jsonwebtoken");
 
+// Reads the Bearer token, verifies its signature, and attaches the user to the request.
 const verifyToken = (req, res, next) => {
 
     const authHeader = req.headers["authorization"];

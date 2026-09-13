@@ -1,5 +1,6 @@
 const db = require("../database/db");
 
+// Adds optional attachment columns for databases created before file uploads existed.
 const addFileColumns = (callback) => {
     db.query("ALTER TABLE appointments ADD COLUMN file_name VARCHAR(255) NULL, ADD COLUMN file_data MEDIUMBLOB NULL", (err) => {
         if (err && err.code !== "ER_DUP_FIELDNAME") return callback(err);
@@ -8,6 +9,7 @@ const addFileColumns = (callback) => {
 };
 
 // ================= CREATE APPOINTMENT =================
+// Inserts an appointment and stores an optional uploaded file in the database.
 const createAppointment = (appointment, callback) => {
     const sql = `
         INSERT INTO appointments
@@ -39,6 +41,7 @@ const createAppointment = (appointment, callback) => {
 
 
 // ================= GET USER APPOINTMENTS =================
+// Queries appointments belonging to one patient.
 const getAppointmentsByUserId = (userId, callback) => {
     const sql = `
         SELECT *
@@ -52,6 +55,7 @@ const getAppointmentsByUserId = (userId, callback) => {
 
 
 // ================= GET ALL APPOINTMENTS (ADMIN) =================
+// Joins appointments with patient details for the admin dashboard.
 const getAllAppointments = (callback) => {
     const sql = `
         SELECT 
@@ -75,6 +79,7 @@ const getAllAppointments = (callback) => {
 
 
 // ================= UPDATE APPOINTMENT STATUS =================
+// Persists the admin's status decision for an appointment.
 const updateAppointmentStatus = (appointmentId, status, callback) => {
     const sql = `
         UPDATE appointments

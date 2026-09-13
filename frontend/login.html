@@ -79,7 +79,7 @@
 
         <div class="field">
           <label for="signupPassword">Password</label>
-          <input type="password" id="signupPassword" required>
+          <input type="password" id="signupPassword" minlength="8" pattern="(?=.*[A-Z])(?=.*[0-9])(?=.*[_*&%]).{8,}" title="Use at least 8 characters, one uppercase letter, one number, and one of these symbols: _ * & %." autocomplete="new-password" required>
           <span class="error-message" id="signupPasswordError"></span>
         </div>
 

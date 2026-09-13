@@ -1,5 +1,6 @@
 const db = require("../database/db");
 
+// Creates the medical reports table during startup.
 const createTable = (callback) => {
     const sql = `
         CREATE TABLE IF NOT EXISTS medical_reports (
@@ -17,6 +18,7 @@ const createTable = (callback) => {
     db.query(sql, callback);
 };
 
+// Finds completed appointments that do not yet have a medical report.
 const getPendingAppointments = (callback) => {
     const sql = `
         SELECT a.id AS appointment_id, a.user_id, a.appointment_date,
@@ -31,6 +33,7 @@ const getPendingAppointments = (callback) => {
     db.query(sql, callback);
 };
 
+// Retrieves reports together with the related patient and appointment data.
 const getAllReports = (callback) => {
     const sql = `
         SELECT r.*, u.fullname AS patient_name
@@ -41,6 +44,7 @@ const getAllReports = (callback) => {
     db.query(sql, callback);
 };
 
+// Inserts a medical report using values supplied by the admin.
 const createReport = (report, callback) => {
     const sql = `
         INSERT INTO medical_reports

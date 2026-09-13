@@ -1,6 +1,7 @@
 const appointmentModel = require("../models/appointmentModel");
 
 // ================= CREATE APPOINTMENT =================
+// Validates patient input, attaches the logged-in user ID, and creates an appointment.
 const createAppointment = (req, res) => {
     try {
         const {
@@ -69,6 +70,7 @@ const createAppointment = (req, res) => {
 
 
 // ================= GET MY APPOINTMENTS =================
+// Loads only the appointments owned by the authenticated patient.
 const getMyAppointments = (req, res) => {
     try {
         // Get logged-in user's ID from JWT
@@ -105,6 +107,7 @@ const getMyAppointments = (req, res) => {
 
 
 // ================= GET ALL APPOINTMENTS (ADMIN) =================
+// Loads the complete appointment list for the protected admin dashboard.
 const getAllAppointments = (req, res) => {
     try {
         // For demo mode (no auth required) or admin users
@@ -140,6 +143,7 @@ const getAllAppointments = (req, res) => {
 
 
 // ================= UPDATE APPOINTMENT STATUS =================
+// Validates an admin decision and persists the new appointment status.
 const updateAppointmentStatus = (req, res) => {
     try {
         const { appointmentId, status } = req.body;

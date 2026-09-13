@@ -2,6 +2,7 @@ const medicalReportModel = require("../models/medicalReportModel");
 const userModel = require("../models/userModel");
 const sendMedicalReport = require("../utils/sendMedicalReport");
 
+// Returns appointments that are ready for a medical report to be created.
 const getPendingReports = (req, res) => {
     medicalReportModel.getPendingAppointments((err, results) => {
         if (err) return res.status(500).json({ success: false, message: "Failed to load pending reports." });
@@ -9,6 +10,7 @@ const getPendingReports = (req, res) => {
     });
 };
 
+// Retrieves medical reports for the authenticated patient.
 const getReports = (req, res) => {
     medicalReportModel.getAllReports((err, results) => {
         if (err) return res.status(500).json({ success: false, message: "Failed to load medical reports." });
@@ -16,6 +18,7 @@ const getReports = (req, res) => {
     });
 };
 
+// Validates report content, saves it, and emails a copy to the patient.
 const createReport = (req, res) => {
     const appointmentId = Number(req.body.appointment_id);
     const userId = Number(req.body.user_id);

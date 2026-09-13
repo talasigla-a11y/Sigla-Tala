@@ -1,5 +1,6 @@
 const db = require("./database/db");
 
+// Updates the appointment status enum to match the values used by the application.
 // Alter the appointments table to fix the status enum
 const sql = `ALTER TABLE appointments 
              MODIFY COLUMN status ENUM('Pending', 'Accepted', 'Rejected', 'Completed', 'Cancelled') 

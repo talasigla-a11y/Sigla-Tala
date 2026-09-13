@@ -1,3 +1,4 @@
+// Allows a request to continue only when authentication middleware identified an admin user.
 const verifyAdmin = (req, res, next) => {
     if (!req.user || !req.user.role) {
         return res.status(401).json({

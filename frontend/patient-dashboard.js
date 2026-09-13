@@ -2,10 +2,12 @@
 // SIGLA TALA - PATIENT DASHBOARD JS
 // ======================================
 
+// Uses the deployed API by default while allowing a local API URL override.
 const API_BASE_URL = window.SIGLA_TALA_API_URL || "https://sigla-tala-08i8.onrender.com";
 const LOGIN_URL = "login.html";
 const INACTIVITY_TIMEOUT_MS = 10 * 60 * 1000;
 
+// Clears browser-stored credentials and patient information during logout.
 function clearAuthSession() {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
@@ -13,6 +15,7 @@ function clearAuthSession() {
     sessionStorage.removeItem("siglaTalaAuthView");
 }
 
+// Ends the session and returns the patient to the login page.
 function forceLogout(message = "You were logged out due to inactivity.") {
     clearAuthSession();
 
@@ -26,6 +29,7 @@ function forceLogout(message = "You were logged out due to inactivity.") {
     }, 500);
 }
 
+// Restarts the patient inactivity timer after a user interaction.
 function resetInactivityTimer() {
     if (!localStorage.getItem("token")) return;
     clearTimeout(window.siglaInactivityTimer);
@@ -125,6 +129,7 @@ let toastTimer;
 // TOAST
 // ======================================
 
+// Shows feedback after a patient action such as booking an appointment.
 function showToast(message, type = "success") {
 
     if (!toast) return;
@@ -149,6 +154,7 @@ function showToast(message, type = "success") {
 // FIRST NAME
 // ======================================
 
+// Converts the stored full name into a short dashboard greeting.
 function getFirstName(name) {
 
     if (!name) {
@@ -166,6 +172,7 @@ function getFirstName(name) {
 // SHOW VIEW
 // ======================================
 
+// Switches between the patient dashboard, appointments, and account views.
 function showView(viewName) {
 
     Object.keys(views).forEach((key) => {
@@ -227,6 +234,7 @@ function showView(viewName) {
 // LOAD ANNOUNCEMENTS
 // ======================================
 
+// Fetches clinic announcements and displays them on the patient dashboard.
 async function loadAnnouncements() {
 
     if (!announcementGrid) {
@@ -268,6 +276,7 @@ async function loadAnnouncements() {
 // USER MENU
 // ======================================
 
+// Opens the patient profile dropdown.
 function openUserMenu() {
 
     if (!userDropdown) return;
@@ -292,6 +301,7 @@ function openUserMenu() {
 }
 
 
+// Closes the patient profile dropdown.
 function closeUserMenu() {
 
     if (!userDropdown) return;
@@ -418,6 +428,7 @@ if (logOutBtn) {
 // LOAD USER INFORMATION
 // ======================================
 
+// Populates the header and account screen using the logged-in user's data.
 function loadUserInformation() {
 
     const savedUser =
@@ -543,6 +554,7 @@ function loadUserInformation() {
 
 }
 
+// Retrieves the latest profile values from the protected backend endpoint.
 async function loadSavedProfile() {
     const token = localStorage.getItem("token");
     if (!token) return;
@@ -567,6 +579,7 @@ async function loadSavedProfile() {
 // SESSION CHECK
 // ======================================
 
+// Verifies that a stored JWT is still accepted before loading private data.
 async function checkSession() {
 
     const token =
@@ -815,6 +828,7 @@ if (appointmentFile) {
 // LOAD APPOINTMENTS
 // ======================================
 
+// Retrieves the patient's appointments and refreshes the appointment list.
 async function loadAppointments() {
 
     if (!appointmentsList) {
@@ -922,6 +936,7 @@ async function loadAppointments() {
 // RENDER APPOINTMENTS
 // ======================================
 
+// Converts appointment records into status-aware cards for the patient.
 function renderAppointments(
     appointments
 ) {
@@ -1016,6 +1031,7 @@ function renderAppointments(
 // SECURITY - ESCAPE HTML
 // ======================================
 
+// Escapes server-provided text before inserting it into the page.
 function escapeHTML(value) {
 
     return String(value)

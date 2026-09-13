@@ -1,5 +1,6 @@
 const sendEmail = require("./gmailSender");
 
+// Sends a generated medical report to the patient's registered email address.
 module.exports = async (email, patientName, report) => {
     await sendEmail({
         to: email,

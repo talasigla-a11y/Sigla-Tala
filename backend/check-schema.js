@@ -1,5 +1,6 @@
 const db = require("./database/db");
 
+// Inspects the appointment table so database structure can be checked during development.
 // Check appointments table schema
 db.query("DESC appointments", (err, results) => {
     if (err) {

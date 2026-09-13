@@ -1,5 +1,6 @@
 const db = require("./database/db");
 
+// Converts empty or NULL appointment statuses back to the default Pending state.
 // Fix empty status values
 const sql = "UPDATE appointments SET status = 'Pending' WHERE status = '' OR status IS NULL";
 

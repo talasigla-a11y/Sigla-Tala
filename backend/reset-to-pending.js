@@ -1,5 +1,6 @@
 const db = require("./database/db");
 
+// Development helper that resets all appointment statuses before a test run.
 // Reset all statuses to 'Pending'
 const sql = `UPDATE appointments SET status = 'Pending'`;
 

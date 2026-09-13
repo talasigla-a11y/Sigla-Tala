@@ -1,5 +1,6 @@
 const db = require("../database/db");
 
+// Creates the announcements table during server startup when it does not exist.
 const createTable = (callback) => {
     const sql = `
         CREATE TABLE IF NOT EXISTS announcements (
@@ -13,6 +14,7 @@ const createTable = (callback) => {
     db.query(sql, callback);
 };
 
+// Reads announcements in reverse chronological order for dashboard display.
 const getAllAnnouncements = (callback) => {
     const sql = `
         SELECT id, title, content, created_at
@@ -23,6 +25,7 @@ const getAllAnnouncements = (callback) => {
     db.query(sql, callback);
 };
 
+// Inserts one announcement using parameterized SQL values.
 const createAnnouncement = (title, content, callback) => {
     const sql = `
         INSERT INTO announcements (title, content)
@@ -32,6 +35,7 @@ const createAnnouncement = (title, content, callback) => {
     db.query(sql, [title, content], callback);
 };
 
+// Deletes one announcement by its database identifier.
 const deleteAnnouncement = (announcementId, callback) => {
     const sql = `DELETE FROM announcements WHERE id = ?`;
 

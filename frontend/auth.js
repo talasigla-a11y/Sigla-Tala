@@ -2,12 +2,14 @@
 // SIGLA TALA - AUTHENTICATION JS
 // ===============================
 
+// Uses a configurable API URL so the same frontend can run locally or on Netlify.
 const API_BASE_URL = window.SIGLA_TALA_API_URL || "https://sigla-tala-08i8.onrender.com";
 
 const API_URL = `${API_BASE_URL}/api/auth`;
 const ADMIN_DASHBOARD_URL = "admin-dashboard.html";
 const PATIENT_DASHBOARD_URL = "patient-dashboard.html";
 
+// Sends administrators and patients to their appropriate dashboard after login.
 function getDashboardUrlForUser(user) {
 
     const role =
@@ -44,6 +46,7 @@ const AUTH_VIEW_KEY = "siglaTalaAuthView";
 let toastTimer;
 
 
+// Switches between sign-in, sign-up, OTP, and password-recovery panels.
 function showAuthView(viewName, shouldRecordHistory = true) {
 
     const nextView =
@@ -97,6 +100,7 @@ window.addEventListener("popstate", function () {
 // TOAST MESSAGE
 // ===============================
 
+// Displays a short success or error message without interrupting the form flow.
 function showToast(message, type = "success") {
 
     if (!toast) return;
@@ -116,13 +120,22 @@ function showToast(message, type = "success") {
 // VALIDATION HELPERS
 // ===============================
 
+// Performs the browser-side email check before sending a request to the API.
 function isValidEmail(email) {
 
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
 }
 
+// Matches the backend password policy before a signup or reset request is sent.
+function isStrongPassword(password) {
 
+    return /^(?=.*[A-Z])(?=.*\d)(?=.*[_*&%]).{8,}$/.test(password);
+
+}
+
+
+// Shows a field-level validation message and marks the input as invalid.
 function setError(input, error, message) {
 
     if (input) {
@@ -136,6 +149,7 @@ function setError(input, error, message) {
 }
 
 
+// Removes the validation state from one input field.
 function clearError(input, error) {
 
     if (input) {
@@ -149,6 +163,7 @@ function clearError(input, error) {
 }
 
 
+// Resets all validation messages before a new submission is processed.
 function clearFormErrors(form) {
 
     if (!form) return;
@@ -359,12 +374,12 @@ if (signupForm) {
 
             valid = false;
 
-        } else if (password.value.length < 6) {
+        } else if (!isStrongPassword(password.value)) {
 
             setError(
                 password,
                 passwordError,
-                "Password must be at least 6 characters."
+                "Use at least 8 characters, one uppercase letter, one number, and one of these symbols: _ * & %."
             );
 
             valid = false;
@@ -934,13 +949,13 @@ if (forgotPasswordLink) {
                 }
 
                 const newPassword = prompt(
-                    "Enter your new password (minimum 6 characters):"
+                    "Enter a password with 8+ characters, an uppercase letter, a number, and one of these symbols: _ * & %."
                 );
 
-                if (!newPassword || newPassword.length < 6) {
+                if (!newPassword || !isStrongPassword(newPassword)) {
 
                     showToast(
-                        "New password must be at least 6 characters.",
+                        "Password must be at least 8 characters and include an uppercase letter, a number, and one of these symbols: _ * & %.",
                         "error"
                     );
 

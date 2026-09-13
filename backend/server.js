@@ -1,3 +1,4 @@
+// Loads deployment secrets and configuration before any application services start.
 require("dotenv").config({ path: require("path").join(__dirname, ".env") });
 
 const express = require("express");
@@ -18,6 +19,7 @@ const userModel = require("./models/userModel");
 
 const verifyToken = require("./middleware/authMiddleware");
 
+// Express coordinates security middleware, API routes, and server responses.
 const app = express();
 
 const requiredEnv = ["JWT_SECRET"];
@@ -28,6 +30,7 @@ if (missingEnv.length > 0) {
 
 const allowedOrigins = (process.env.ALLOWED_ORIGINS || "http://localhost:5500,http://127.0.0.1:5500,https://sigla-tala.netlify.app,https://siglatala.netlify.app,https://siglata.netlify.app").split(",").map((origin) => origin.trim()).filter(Boolean);
 
+// Allows browser requests only from configured frontend domains and local development hosts.
 function isAllowedOrigin(origin) {
     if (!origin) return true;
 
@@ -59,6 +62,7 @@ app.use(helmet({
     contentSecurityPolicy: false
 }));
 
+// Applies a general request limit to reduce abuse of public API endpoints.
 const apiLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
     max: 200,
@@ -70,6 +74,7 @@ const apiLimiter = rateLimit({
     }
 });
 
+// Applies a stricter limit to login and OTP endpoints because they are sensitive operations.
 const authLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
     max: 20,
@@ -101,10 +106,12 @@ app.use("/api/medical-reports", medicalReportRoutes);
 
 // ================= TEST BACKEND =================
 
+// Simple health endpoint used to confirm that the deployed service is running.
 app.get("/", (req, res) => {
     res.send("Backend Working");
 });
 
+// Returns a consistent JSON response when no route matches the request.
 app.use((req, res) => {
     res.status(404).json({
         success: false,
@@ -114,6 +121,7 @@ app.use((req, res) => {
 
 // ================= PROTECTED DASHBOARD =================
 
+// Demonstrates a protected endpoint: verifyToken runs before the dashboard response.
 app.get("/dashboard", verifyToken, (req, res) => {
 
     res.json({
@@ -127,6 +135,7 @@ app.get("/dashboard", verifyToken, (req, res) => {
 
 // ================= START SERVER =================
 
+// Render supplies PORT in production; localhost falls back to port 3000.
 const port = Number(process.env.PORT) || 3000;
 
 userModel.ensureSchema((userErr) => {
