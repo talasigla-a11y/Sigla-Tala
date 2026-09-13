@@ -26,18 +26,18 @@ const createTable = (callback) => {
 
 const ensureSchema = (callback) => {
     const checks = [
-        ["fullname", "ALTER TABLE users ADD COLUMN IF NOT EXISTS fullname VARCHAR(255) NOT NULL DEFAULT ''"],
-        ["age", "ALTER TABLE users ADD COLUMN IF NOT EXISTS age INT NOT NULL DEFAULT 0"],
-        ["gender", "ALTER TABLE users ADD COLUMN IF NOT EXISTS gender VARCHAR(50) NOT NULL DEFAULT 'other'"],
-        ["email", "ALTER TABLE users ADD COLUMN IF NOT EXISTS email VARCHAR(255) NOT NULL DEFAULT ''"],
-        ["role", "ALTER TABLE users ADD COLUMN IF NOT EXISTS role VARCHAR(50) DEFAULT 'patient'"],
-        ["password", "ALTER TABLE users ADD COLUMN IF NOT EXISTS password VARCHAR(255) NOT NULL DEFAULT ''"],
-        ["otp", "ALTER TABLE users ADD COLUMN IF NOT EXISTS otp VARCHAR(255) NULL"],
-        ["is_verified", "ALTER TABLE users ADD COLUMN IF NOT EXISTS is_verified TINYINT(1) DEFAULT 0"],
-        ["login_otp", "ALTER TABLE users ADD COLUMN IF NOT EXISTS login_otp VARCHAR(255) NULL"],
-        ["login_otp_expires", "ALTER TABLE users ADD COLUMN IF NOT EXISTS login_otp_expires DATETIME NULL"],
-        ["reset_otp", "ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_otp VARCHAR(255) NULL"],
-        ["reset_otp_expires", "ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_otp_expires DATETIME NULL"]
+        ["fullname", "ALTER TABLE users ADD COLUMN fullname VARCHAR(255) NOT NULL DEFAULT ''"],
+        ["age", "ALTER TABLE users ADD COLUMN age INT NOT NULL DEFAULT 0"],
+        ["gender", "ALTER TABLE users ADD COLUMN gender VARCHAR(50) NOT NULL DEFAULT 'other'"],
+        ["email", "ALTER TABLE users ADD COLUMN email VARCHAR(255) NOT NULL DEFAULT ''"],
+        ["role", "ALTER TABLE users ADD COLUMN role VARCHAR(50) DEFAULT 'patient'"],
+        ["password", "ALTER TABLE users ADD COLUMN password VARCHAR(255) NOT NULL DEFAULT ''"],
+        ["otp", "ALTER TABLE users ADD COLUMN otp VARCHAR(255) NULL"],
+        ["is_verified", "ALTER TABLE users ADD COLUMN is_verified TINYINT(1) DEFAULT 0"],
+        ["login_otp", "ALTER TABLE users ADD COLUMN login_otp VARCHAR(255) NULL"],
+        ["login_otp_expires", "ALTER TABLE users ADD COLUMN login_otp_expires DATETIME NULL"],
+        ["reset_otp", "ALTER TABLE users ADD COLUMN reset_otp VARCHAR(255) NULL"],
+        ["reset_otp_expires", "ALTER TABLE users ADD COLUMN reset_otp_expires DATETIME NULL"]
     ];
 
     createTable((createErr) => {
@@ -58,7 +58,7 @@ const ensureSchema = (callback) => {
             index += 1;
 
             db.query(sql, (err) => {
-                if (err) {
+                if (err && err.code !== "ER_DUP_FIELDNAME") {
                     callback(err);
                     return;
                 }
