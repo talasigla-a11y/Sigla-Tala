@@ -22,6 +22,9 @@ const verifyToken = require("./middleware/authMiddleware");
 // Express coordinates security middleware, API routes, and server responses.
 const app = express();
 
+// Render places the service behind one reverse proxy; trust it for client IP detection.
+app.set("trust proxy", 1);
+
 const requiredEnv = ["JWT_SECRET"];
 const missingEnv = requiredEnv.filter((key) => !process.env[key] || String(process.env[key]).trim() === "");
 if (missingEnv.length > 0) {
