@@ -109,12 +109,14 @@
               <label for="apptType">Appointment Type</label>
               <select id="apptType" required>
                 <option value="" disabled selected>Select type of appointment...</option>
-                <option value="general">General Consultation</option>
-                <option value="vaccination">Vaccination</option>
-                <option value="prenatal">Prenatal Check-up</option>
-                <option value="dental">Dental</option>
-                <option value="other">Other</option>
+                <option value="general" data-job-specification="General Practitioner">General Consultation</option>
+                <option value="vaccination" data-job-specification="Vaccinator">Vaccination</option>
+                <option value="prenatal" data-job-specification="General Practitioner">Prenatal Check-up</option>
+                <option value="dental" data-job-specification="Dentist">Dental</option>
+                <option value="pediatric" data-job-specification="Pediatrician">Pediatric Consultation</option>
+                <option value="other" data-job-specification="Health Care workers">Other</option>
               </select>
+              <p class="field-hint" id="apptProvider">Assigned to: Select an appointment type</p>
               <span class="error-message" id="apptTypeError"></span>
             </div>
 

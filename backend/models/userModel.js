@@ -10,6 +10,7 @@ const createTable = (callback) => {
             gender VARCHAR(50) NOT NULL,
             email VARCHAR(255) NOT NULL UNIQUE,
             role VARCHAR(50) DEFAULT 'patient',
+            job_specification VARCHAR(100) NULL,
             password VARCHAR(255) NOT NULL,
             otp VARCHAR(255) NULL,
             is_verified TINYINT(1) DEFAULT 0,
@@ -33,6 +34,7 @@ const ensureSchema = (callback) => {
         ["gender", "ALTER TABLE users ADD COLUMN gender VARCHAR(50) NOT NULL DEFAULT 'other'"],
         ["email", "ALTER TABLE users ADD COLUMN email VARCHAR(255) NOT NULL DEFAULT ''"],
         ["role", "ALTER TABLE users ADD COLUMN role VARCHAR(50) DEFAULT 'patient'"],
+        ["job_specification", "ALTER TABLE users ADD COLUMN job_specification VARCHAR(100) NULL"],
         ["password", "ALTER TABLE users ADD COLUMN password VARCHAR(255) NOT NULL DEFAULT ''"],
         ["otp", "ALTER TABLE users ADD COLUMN otp VARCHAR(255) NULL"],
         ["is_verified", "ALTER TABLE users ADD COLUMN is_verified TINYINT(1) DEFAULT 0"],
@@ -277,24 +279,25 @@ const updatePassword = (email, passwordHash, callback) => {
 };
 
 // Updates profile fields without changing authentication credentials.
-const updateProfile = (userId, fullname, age, gender, callback) => {
+const updateProfile = (userId, fullname, age, gender, jobSpecification, callback) => {
 
     const sql = `
         UPDATE users
         SET
             fullname = ?,
             age = ?,
-            gender = ?
+            gender = ?,
+            job_specification = COALESCE(?, job_specification)
         WHERE id = ?
     `;
 
-    db.query(sql, [fullname, age, gender, userId], callback);
+    db.query(sql, [fullname, age, gender, jobSpecification, userId], callback);
 };
 
 // Retrieves safe profile fields for the authenticated user's dashboard.
 const getProfileById = (userId, callback) => {
     const sql = `
-        SELECT id, fullname, age, gender, email, role
+        SELECT id, fullname, age, gender, email, role, job_specification
         FROM users
         WHERE id = ?
     `;

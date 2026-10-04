@@ -148,12 +148,15 @@ userModel.ensureSchema((userErr) => {
 
     appointmentModel.addFileColumns((fileErr) => {
         if (fileErr) console.error("APPOINTMENT FILE COLUMNS ERROR:", fileErr);
-        medicalReportModel.createTable((reportErr) => {
-            if (reportErr) console.error("MEDICAL REPORT TABLE ERROR:", reportErr);
-            announcementModel.createTable((err) => {
-                if (err) console.error("ANNOUNCEMENTS TABLE ERROR:", err);
-                app.listen(port, () => {
-                    console.log(`✅ Server running on port ${port}`);
+        appointmentModel.ensureJobSpecificationColumn((jobSpecificationErr) => {
+            if (jobSpecificationErr) console.error("APPOINTMENT JOB SPECIFICATION COLUMN ERROR:", jobSpecificationErr);
+            medicalReportModel.createTable((reportErr) => {
+                if (reportErr) console.error("MEDICAL REPORT TABLE ERROR:", reportErr);
+                announcementModel.createTable((err) => {
+                    if (err) console.error("ANNOUNCEMENTS TABLE ERROR:", err);
+                    app.listen(port, () => {
+                        console.log(`✅ Server running on port ${port}`);
+                    });
                 });
             });
         });

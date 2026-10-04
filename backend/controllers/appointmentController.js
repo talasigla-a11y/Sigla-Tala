@@ -1,5 +1,19 @@
 const appointmentModel = require("../models/appointmentModel");
 
+const jobSpecificationByAppointmentType = {
+    "general consultation": "General Practitioner",
+    checkup: "General Practitioner",
+    "check-up": "General Practitioner",
+    "prenatal check-up": "General Practitioner",
+    dental: "Dentist",
+    vaccination: "Vaccinator",
+    "pediatric consultation": "Pediatrician",
+    other: "Health Care workers"
+};
+
+const getJobSpecification = (appointmentType) =>
+    jobSpecificationByAppointmentType[String(appointmentType).trim().toLowerCase()] || "Health Care workers";
+
 // ================= CREATE APPOINTMENT =================
 // Validates patient input, attaches the logged-in user ID, and creates an appointment.
 const createAppointment = (req, res) => {
@@ -25,18 +39,38 @@ const createAppointment = (req, res) => {
             });
         }
 
-        const appointment = {
-            user_id,
-            appointment_type,
-            appointment_date,
-            time_preference,
-            file_name: req.file ? req.file.originalname : null,
-            file_data: req.file ? req.file.buffer : null
-        };
+        const job_specification = getJobSpecification(appointment_type);
 
-        appointmentModel.createAppointment(
-            appointment,
-            (err, result) => {
+        appointmentModel.getAdminByJobSpecification(job_specification, (adminErr, admins) => {
+            if (adminErr) {
+                console.error("FIND APPOINTMENT ADMIN ERROR:", adminErr);
+                return res.status(500).json({
+                    success: false,
+                    message: "Failed to find an administrator for this appointment type."
+                });
+            }
+
+            if (!admins.length) {
+                return res.status(409).json({
+                    success: false,
+                    message: `No admin is configured for ${job_specification} appointments. Ask an administrator to set their Job Specification.`
+                });
+            }
+
+            const assignedAdmin = admins[0];
+            const appointment = {
+                user_id,
+                appointment_type,
+                job_specification,
+                assigned_admin_id: assignedAdmin.id,
+                assigned_admin_name: assignedAdmin.fullname,
+                appointment_date,
+                time_preference,
+                file_name: req.file ? req.file.originalname : null,
+                file_data: req.file ? req.file.buffer : null
+            };
+
+            appointmentModel.createAppointment(appointment, (err, result) => {
                 if (err) {
                     console.error("CREATE APPOINTMENT ERROR:", err);
 
@@ -55,8 +89,8 @@ const createAppointment = (req, res) => {
                         status: "Pending"
                     }
                 });
-            }
-        );
+            });
+        });
 
     } catch (error) {
         console.error("APPOINTMENT ERROR:", error);
@@ -107,13 +141,14 @@ const getMyAppointments = (req, res) => {
 
 
 // ================= GET ALL APPOINTMENTS (ADMIN) =================
-// Loads the complete appointment list for the protected admin dashboard.
+// Loads appointments assigned to the authenticated administrator.
 const getAllAppointments = (req, res) => {
     try {
         // For demo mode (no auth required) or admin users
         // In production, add back verifyToken middleware to the route
         
         appointmentModel.getAllAppointments(
+            req.user.id,
             (err, results) => {
                 if (err) {
                     console.error("GET ALL APPOINTMENTS ERROR:", err);
@@ -159,6 +194,7 @@ const updateAppointmentStatus = (req, res) => {
         appointmentModel.updateAppointmentStatus(
             appointmentId,
             status,
+            req.user.id,
             (err, result) => {
                 if (err) {
                     console.error("UPDATE APPOINTMENT STATUS ERROR:", err);
@@ -166,6 +202,13 @@ const updateAppointmentStatus = (req, res) => {
                     return res.status(500).json({
                         success: false,
                         message: "Failed to update appointment status."
+                    });
+                }
+
+                if (!result.affectedRows) {
+                    return res.status(404).json({
+                        success: false,
+                        message: "Appointment not found or not assigned to this admin."
                     });
                 }
 

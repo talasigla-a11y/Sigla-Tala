@@ -735,6 +735,20 @@ const appointmentType =
         "apptType"
     );
 
+const appointmentProvider =
+    document.getElementById(
+        "apptProvider"
+    );
+
+if (appointmentType && appointmentProvider) {
+    appointmentType.addEventListener("change", function () {
+        const selectedOption = appointmentType.options[appointmentType.selectedIndex];
+        appointmentProvider.textContent = selectedOption.dataset.jobSpecification
+            ? `Assigned to: ${selectedOption.dataset.jobSpecification}`
+            : "Assigned to: Select an appointment type";
+    });
+}
+
 const appointmentDate =
     document.getElementById(
         "apptDate"
@@ -1011,6 +1025,10 @@ function renderAppointments(
 
                         <div class="appointment-item-detail">
 
+                            Assigned to: ${escapeHTML(appointment.assigned_admin_name
+                                ? `${appointment.job_specification} - ${appointment.assigned_admin_name}`
+                                : appointment.job_specification || "Staff assignment pending")}
+                            <br>
                             ${escapeHTML(date)}
                             ·
                             ${escapeHTML(time)}
@@ -1262,6 +1280,11 @@ if (appointmentForm) {
 
 
                 appointmentForm.reset();
+
+                if (appointmentProvider) {
+                    appointmentProvider.textContent =
+                        "Assigned to: Select an appointment type";
+                }
 
 
                 if (uploadDropText) {

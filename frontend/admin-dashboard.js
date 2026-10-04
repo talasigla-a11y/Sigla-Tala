@@ -283,6 +283,7 @@ async function loadAppointments() {
         dateISO: apt.appointment_date ? apt.appointment_date.split('T')[0] : '',
         patientName: apt.patientName || 'Unknown Patient',
         type: apt.appointment_type || 'Appointment',
+        jobSpecification: apt.job_specification || 'Health Care workers',
         time: apt.time_preference || 'No time selected',
         status: apt.status || 'Pending',
         user_id: apt.user_id
@@ -451,12 +452,14 @@ async function loadSavedProfile() {
     currentUser.name = data.user.fullname;
     currentUser.age = data.user.age;
     currentUser.gender = data.user.gender;
+    currentUser.job_specification = data.user.job_specification || '';
     localStorage.setItem('user', JSON.stringify({ ...getStoredUser(), ...data.user }));
     userMenuName.textContent = firstNameFrom(currentUser.name);
     dropdownName.textContent = currentUser.name;
     document.getElementById('accFullName').value = currentUser.name;
     document.getElementById('accAge').value = currentUser.age;
     document.getElementById('accGender').value = currentUser.gender;
+    document.getElementById('accJobSpecification').value = currentUser.job_specification;
   } catch (error) {
     console.error('PROFILE LOAD ERROR:', error);
   }
@@ -633,6 +636,7 @@ function renderDayDetail(dateISO) {
           <div class="day-patient-main">
             <div class="day-patient-name">${a.patientName || 'Patient'}</div>
             <div class="day-patient-type">${a.type}</div>
+            <div class="day-patient-type">Assigned to: ${escapeReportHTML(a.jobSpecification)}</div>
             <div class="day-patient-time">${a.time}</div>
           </div>
           ${actionMarkup}
@@ -694,6 +698,7 @@ accountForm.addEventListener('submit', async (e) => {
   const fullname = document.getElementById('accFullName').value.trim();
   const age = Number(document.getElementById('accAge').value);
   const gender = document.getElementById('accGender').value;
+  const jobSpecification = document.getElementById('accJobSpecification').value;
   const token = localStorage.getItem('token');
 
   try {
@@ -703,7 +708,7 @@ accountForm.addEventListener('submit', async (e) => {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify({ fullname, age, gender }),
+      body: JSON.stringify({ fullname, age, gender, job_specification: jobSpecification }),
     });
     const data = await response.json();
 
@@ -712,11 +717,13 @@ accountForm.addEventListener('submit', async (e) => {
     currentUser.name = data.user.fullname;
     currentUser.age = data.user.age;
     currentUser.gender = data.user.gender;
+    currentUser.job_specification = data.user.job_specification;
     localStorage.setItem('user', JSON.stringify({
       ...getStoredUser(),
       fullname: currentUser.name,
       age: currentUser.age,
       gender: currentUser.gender,
+      job_specification: currentUser.job_specification,
     }));
     userMenuName.textContent = firstNameFrom(currentUser.name);
     dropdownName.textContent = currentUser.name;

@@ -1,7 +1,16 @@
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const userModel = require("../models/userModel");
+const appointmentModel = require("../models/appointmentModel");
 const sendOTP = require("../utils/sendEmail");
+
+const ADMIN_JOB_SPECIFICATIONS = [
+    "General Practitioner",
+    "Dentist",
+    "Vaccinator",
+    "Health Care workers",
+    "Pediatrician"
+];
 
 // Normalizes user input before it is compared with or stored in the database.
 const sanitizeEmail = (value) => String(value || "").trim().toLowerCase();
@@ -484,6 +493,10 @@ const updateProfile = (req, res) => {
     const fullname = String(req.body.fullname || "").trim();
     const age = Number(req.body.age);
     const gender = String(req.body.gender || "").trim();
+    const isAdmin = String(req.user.role || "").toLowerCase() === "admin";
+    const jobSpecification = isAdmin
+        ? String(req.body.job_specification || "").trim()
+        : null;
 
     if (!fullname || !Number.isInteger(age) || age < 0 || age > 120 || !gender) {
         return res.status(400).json({
@@ -492,7 +505,14 @@ const updateProfile = (req, res) => {
         });
     }
 
-    userModel.updateProfile(req.user.id, fullname, age, gender, (err, result) => {
+    if (isAdmin && !ADMIN_JOB_SPECIFICATIONS.includes(jobSpecification)) {
+        return res.status(400).json({
+            success: false,
+            message: "Select a valid Job Specification for your admin account."
+        });
+    }
+
+    userModel.updateProfile(req.user.id, fullname, age, gender, jobSpecification, (err, result) => {
         if (err) {
             console.error("UPDATE PROFILE ERROR:", err);
             return res.status(500).json({
@@ -508,10 +528,35 @@ const updateProfile = (req, res) => {
             });
         }
 
-        return res.status(200).json({
+        const sendProfileResponse = () => res.status(200).json({
             success: true,
-            user: { id: req.user.id, fullname, age, gender }
+            user: {
+                id: req.user.id,
+                fullname,
+                age,
+                gender,
+                ...(isAdmin ? { job_specification: jobSpecification } : {})
+            }
         });
+
+        if (!isAdmin) {
+            return sendProfileResponse();
+        }
+
+        appointmentModel.assignUnassignedAppointmentsByJobSpecification(
+            jobSpecification,
+            (assignmentErr) => {
+                if (assignmentErr) {
+                    console.error("ASSIGN EXISTING APPOINTMENTS ERROR:", assignmentErr);
+                    return res.status(500).json({
+                        success: false,
+                        message: "Profile saved, but existing appointments could not be assigned."
+                    });
+                }
+
+                sendProfileResponse();
+            }
+        );
     });
 };
 
