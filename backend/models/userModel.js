@@ -55,7 +55,10 @@ const ensureSchema = (callback) => {
         // Applies each compatibility schema change in sequence.
         const runNext = () => {
             if (index >= checks.length) {
-                callback(null);
+                db.query(
+                    "UPDATE users SET job_specification = NULL WHERE role IS NULL OR LOWER(TRIM(role)) <> 'admin'",
+                    callback
+                );
                 return;
             }
 
@@ -288,7 +291,10 @@ const updateProfile = (userId, fullname, age, gender, jobSpecification, callback
             fullname = ?,
             age = ?,
             gender = ?,
-            job_specification = COALESCE(?, job_specification)
+            job_specification = CASE
+                WHEN LOWER(TRIM(role)) = 'admin' THEN COALESCE(?, job_specification)
+                ELSE NULL
+            END
         WHERE id = ?
     `;
 
