@@ -19,6 +19,17 @@ const sanitizeName = (value) => String(value || "").trim();
 // Requires at least 8 characters, one uppercase letter, one number, and one allowed symbol.
 const isStrongPassword = (value) => /^(?=.*[A-Z])(?=.*\d)(?=.*[_*&%]).{8,}$/.test(value);
 
+// Attempts email delivery without discarding an OTP that has already been saved.
+const trySendOTP = async (email, otp, purpose) => {
+    try {
+        await sendOTP(email, otp);
+        return true;
+    } catch (error) {
+        console.error(`${purpose} OTP EMAIL DELIVERY ERROR:`, error);
+        return false;
+    }
+};
+
 // Restricts roles to the two application roles; public registration always creates patients.
 const normalizeRole = (input) => {
     const role = String(input || "patient").trim();
@@ -87,24 +98,14 @@ const register = async (req, res) => {
                         });
                     }
 
-                    try {
+                    const emailSent = await trySendOTP(email, otp, "REGISTRATION");
 
-                        await sendOTP(email, otp);
-
-                        return res.status(201).json({
-                            success: true,
-                            message: "Registration successful! OTP sent to your email."
-                        });
-
-                    } catch (emailError) {
-
-                        return res.status(500).json({
-                            success: false,
-                            message: "User created but failed to send OTP email.",
-                            error: emailError.message
-                        });
-
-                    }
+                    return res.status(201).json({
+                        success: true,
+                        message: emailSent
+                            ? "Registration successful! OTP sent to your email."
+                            : "Registration successful! OTP saved, but email delivery failed."
+                    });
 
                 }
             );
@@ -184,26 +185,14 @@ const login = (req, res) => {
                 });
             }
 
-            try {
+            const emailSent = await trySendOTP(email, loginOTP, "LOGIN");
 
-                await sendOTP(email, loginOTP);
-
-                return res.status(200).json({
-                    success: true,
-                    message: "Login OTP sent to your email."
-                });
-
-            } catch (error) {
-
-    console.log("EMAIL ERROR:", error);
-
-    return res.status(500).json({
-        success: false,
-        message: "Failed to send OTP email.",
-        error: error.message
-    });
-
-}
+            return res.status(200).json({
+                success: true,
+                message: emailSent
+                    ? "Login OTP sent to your email."
+                    : "Login OTP saved, but email delivery failed."
+            });
 
         });
 
@@ -311,26 +300,14 @@ const forgotPassword = (req, res) => {
                 });
             }
 
-            try {
+            const emailSent = await trySendOTP(email.trim(), resetOTP, "PASSWORD RESET");
 
-                await sendOTP(email.trim(), resetOTP);
-
-                return res.status(200).json({
-                    success: true,
-                    message: "Password reset OTP sent to your email."
-                });
-
-            } catch (error) {
-
-                console.log("EMAIL ERROR:", error);
-
-                return res.status(500).json({
-                    success: false,
-                    message: "Failed to send OTP email.",
-                    error: error.message
-                });
-
-            }
+            return res.status(200).json({
+                success: true,
+                message: emailSent
+                    ? "Password reset OTP sent to your email."
+                    : "Password reset OTP saved, but email delivery failed."
+            });
 
         });
 

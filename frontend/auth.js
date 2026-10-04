@@ -467,7 +467,7 @@ if (signupForm) {
             // ===============================
 
             const otp = prompt(
-                "Enter the 6-digit OTP sent to your email:"
+                "Enter the 6-digit OTP:"
             );
 
 
@@ -712,7 +712,7 @@ if (signinForm) {
 
 
             showToast(
-                "OTP sent to your email.",
+                data.message || "Login OTP requested.",
                 "success"
             );
 
@@ -934,7 +934,7 @@ if (forgotPasswordLink) {
                 );
 
                 const otp = prompt(
-                    "Enter the 6-digit reset code sent to your email:"
+                    "Enter the 6-digit reset code:"
                 );
 
                 if (!otp) {
