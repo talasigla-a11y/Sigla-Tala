@@ -52,6 +52,7 @@ const ensureSchema = (callback) => {
 
         let index = 0;
 
+        // Applies each compatibility schema change in sequence.
         const runNext = () => {
             if (index >= checks.length) {
                 callback(null);
