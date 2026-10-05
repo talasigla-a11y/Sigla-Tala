@@ -30,17 +30,24 @@ function getDashboardUrlForUser(user) {
 const signinCard = document.getElementById("signinCard");
 const signupCard = document.getElementById("signupCard");
 const otpCard = document.getElementById("otpCard");
+const resetCard = document.getElementById("resetCard");
 
 const signinForm = document.getElementById("signinForm");
 const signupForm = document.getElementById("signupForm");
 const otpForm = document.getElementById("otpForm");
+const resetForm = document.getElementById("resetForm");
 
 const otpEmailInput = document.getElementById("otpEmail");
 const otpInput = document.getElementById("otpInput");
+const resetEmailInput = document.getElementById("resetEmail");
+const resetOtpInput = document.getElementById("resetOtpInput");
+const resetPasswordInput = document.getElementById("resetPasswordInput");
+const resetConfirmInput = document.getElementById("resetConfirmInput");
 
 const showSignup = document.getElementById("showSignup");
 const showSignin = document.getElementById("showSignin");
 const backToSignin = document.getElementById("backToSignin");
+const backToSigninFromReset = document.getElementById("backToSigninFromReset");
 
 const forgotPasswordLink =
     document.getElementById("forgotPasswordLink");
@@ -52,7 +59,7 @@ const AUTH_VIEW_KEY = "siglaTalaAuthView";
 let toastTimer;
 
 
-// Switches between sign-in, sign-up, and OTP panels.
+// Switches between sign-in, sign-up, OTP, and reset-password panels.
 function showAuthView(viewName, shouldRecordHistory = true) {
 
     const nextView =
@@ -60,7 +67,9 @@ function showAuthView(viewName, shouldRecordHistory = true) {
             "signup" :
             viewName === "otp" ?
                 "otp" :
-                "signin";
+                viewName === "reset" ?
+                    "reset" :
+                    "signin";
 
     if (signinCard) {
         signinCard.classList.toggle("hidden", nextView !== "signin");
@@ -74,11 +83,15 @@ function showAuthView(viewName, shouldRecordHistory = true) {
         otpCard.classList.toggle("hidden", nextView !== "otp");
     }
 
+    if (resetCard) {
+        resetCard.classList.toggle("hidden", nextView !== "reset");
+    }
+
     sessionStorage.setItem(AUTH_VIEW_KEY, nextView);
 
     if (shouldRecordHistory && window.history && window.history.pushState) {
         const nextUrl = new URL(window.location.href);
-        nextUrl.hash = nextView === "signup" ? "#signup" : nextView === "otp" ? "#otp" : "#signin";
+        nextUrl.hash = nextView === "signup" ? "#signup" : nextView === "otp" ? "#otp" : nextView === "reset" ? "#reset" : "#signin";
         window.history.pushState({ authView: nextView }, "", nextUrl);
     }
 
@@ -87,10 +100,13 @@ function showAuthView(viewName, shouldRecordHistory = true) {
     if (otpForm) {
         clearFormErrors(otpForm);
     }
+    if (resetForm) {
+        clearFormErrors(resetForm);
+    }
 }
 
 
-// Restores the correct sign-in, sign-up, or OTP panel after browser navigation.
+// Restores the correct sign-in, sign-up, OTP, or reset panel after browser navigation.
 window.addEventListener("popstate", function () {
 
     const stateView =
@@ -109,7 +125,11 @@ window.addEventListener("popstate", function () {
             savedView === "otp" ||
             window.location.hash === "#otp" ?
                 "otp" :
-                "signin";
+                stateView === "reset" ||
+                savedView === "reset" ||
+                window.location.hash === "#reset" ?
+                    "reset" :
+                    "signin";
 
     showAuthView(nextView, false);
 
@@ -141,6 +161,13 @@ if (backToSignin) {
     backToSignin.addEventListener("click", function (event) {
         event.preventDefault();
         activeOtpFlow = null;
+        showAuthView("signin");
+    });
+}
+
+if (backToSigninFromReset) {
+    backToSigninFromReset.addEventListener("click", function (event) {
+        event.preventDefault();
         showAuthView("signin");
     });
 }
@@ -804,7 +831,7 @@ if (signinForm) {
 
 if (forgotPasswordLink) {
 
-    // Requests a reset OTP and completes the password recovery flow.
+    // Requests a reset OTP and guides the user through a form-based password recovery flow.
     forgotPasswordLink.addEventListener(
         "click",
         async function (event) {
@@ -871,79 +898,11 @@ if (forgotPasswordLink) {
                     "success"
                 );
 
-                const otp = prompt(
-                    "Enter the 6-digit reset code:"
-                );
-
-                if (!otp) {
-
-                    showToast(
-                        "Password reset cancelled.",
-                        "error"
-                    );
-
-                    return;
-
+                if (resetEmailInput) {
+                    resetEmailInput.value = emailValue;
                 }
 
-                const newPassword = prompt(
-                    "Enter a password with 8+ characters, an uppercase letter, a number, and one of these symbols: _ * & %."
-                );
-
-                if (!newPassword || !isStrongPassword(newPassword)) {
-
-                    showToast(
-                        "Password must be at least 8 characters and include an uppercase letter, a number, and one of these symbols: _ * & %.",
-                        "error"
-                    );
-
-                    return;
-
-                }
-
-                const resetResponse = await fetch(
-                    `${API_URL}/reset-password`,
-                    {
-                        method: "POST",
-                        headers: {
-                            "Content-Type": "application/json"
-                        },
-                        body: JSON.stringify({
-                            email: emailValue,
-                            otp: otp.trim(),
-                            newPassword: newPassword
-                        })
-                    }
-                );
-
-                const resetData = await resetResponse
-                    .json()
-                    .catch(() => ({}));
-
-                if (!resetResponse.ok) {
-
-                    showToast(
-                        resetData.message ||
-                        "Password reset failed.",
-                        "error"
-                    );
-
-                    return;
-
-                }
-
-                showToast(
-                    resetData.message ||
-                    "Password reset successfully.",
-                    "success"
-                );
-
-                const passwordInput =
-                    document.getElementById("signinPassword");
-
-                if (passwordInput) {
-                    passwordInput.value = "";
-                }
+                showAuthView("reset", true);
 
             } catch (error) {
 
@@ -962,6 +921,83 @@ if (forgotPasswordLink) {
         }
     );
 
+}
+
+if (resetForm) {
+    resetForm.addEventListener("submit", async function (event) {
+        event.preventDefault();
+
+        const emailValue = resetEmailInput ? resetEmailInput.value.trim() : "";
+        const otpValue = resetOtpInput ? resetOtpInput.value.trim() : "";
+        const newPassword = resetPasswordInput ? resetPasswordInput.value : "";
+        const confirmPassword = resetConfirmInput ? resetConfirmInput.value : "";
+        const otpError = document.getElementById("resetOtpInputError");
+        const passwordError = document.getElementById("resetPasswordError");
+        const confirmError = document.getElementById("resetConfirmError");
+
+        if (!emailValue || !isValidEmail(emailValue)) {
+            showToast("Please enter a valid email.", "error");
+            return;
+        }
+
+        if (!/^\d{6}$/.test(otpValue)) {
+            setError(resetOtpInput, otpError, "Enter the 6-digit OTP.");
+            return;
+        }
+
+        if (!newPassword || !isStrongPassword(newPassword)) {
+            setError(resetPasswordInput, passwordError, "Password must be at least 8 characters and include an uppercase, number, and symbol.");
+            return;
+        }
+
+        if (newPassword !== confirmPassword) {
+            setError(resetConfirmInput, confirmError, "Passwords do not match.");
+            return;
+        }
+
+        const button = resetForm.querySelector(".btn-primary");
+        button.disabled = true;
+        button.textContent = "Updating...";
+
+        try {
+            const response = await fetch(
+                `${API_URL}/reset-password`,
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        email: emailValue,
+                        otp: otpValue,
+                        newPassword: newPassword
+                    })
+                }
+            );
+
+            const data = await response.json().catch(() => ({}));
+
+            if (!response.ok) {
+                showToast(data.message || "Password reset failed.", "error");
+                return;
+            }
+
+            showToast(data.message || "Password reset successfully.", "success");
+            resetForm.reset();
+            showAuthView("signin");
+
+            const passwordInput = document.getElementById("signinPassword");
+            if (passwordInput) {
+                passwordInput.value = "";
+            }
+        } catch (error) {
+            console.error("RESET PASSWORD ERROR:", error);
+            showToast("Cannot connect to the server.", "error");
+        } finally {
+            button.disabled = false;
+            button.textContent = "Update Password";
+        }
+    });
 }
 
 
