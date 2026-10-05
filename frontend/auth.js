@@ -2,8 +2,8 @@
 // SIGLA TALA - AUTHENTICATION JS
 // ===============================
 
-// Uses a configurable API URL so the same frontend can run locally or on Netlify.
-const API_BASE_URL = window.SIGLA_TALA_API_URL || "https://sigla-tala-08i8.onrender.com";
+// Uses a configurable API URL so the same frontend can run locally or on the production domain.
+const API_BASE_URL = window.SIGLA_TALA_API_URL || "https://api.siglatala.com";
 
 const API_URL = `${API_BASE_URL}/api/auth`;
 const ADMIN_DASHBOARD_URL = "admin-dashboard.html";
@@ -29,12 +29,18 @@ function getDashboardUrlForUser(user) {
 
 const signinCard = document.getElementById("signinCard");
 const signupCard = document.getElementById("signupCard");
+const otpCard = document.getElementById("otpCard");
 
 const signinForm = document.getElementById("signinForm");
 const signupForm = document.getElementById("signupForm");
+const otpForm = document.getElementById("otpForm");
+
+const otpEmailInput = document.getElementById("otpEmail");
+const otpInput = document.getElementById("otpInput");
 
 const showSignup = document.getElementById("showSignup");
 const showSignin = document.getElementById("showSignin");
+const backToSignin = document.getElementById("backToSignin");
 
 const forgotPasswordLink =
     document.getElementById("forgotPasswordLink");
@@ -46,13 +52,15 @@ const AUTH_VIEW_KEY = "siglaTalaAuthView";
 let toastTimer;
 
 
-// Switches between sign-in, sign-up, OTP, and password-recovery panels.
+// Switches between sign-in, sign-up, and OTP panels.
 function showAuthView(viewName, shouldRecordHistory = true) {
 
     const nextView =
         viewName === "signup" ?
             "signup" :
-            "signin";
+            viewName === "otp" ?
+                "otp" :
+                "signin";
 
     if (signinCard) {
         signinCard.classList.toggle("hidden", nextView !== "signin");
@@ -62,19 +70,27 @@ function showAuthView(viewName, shouldRecordHistory = true) {
         signupCard.classList.toggle("hidden", nextView !== "signup");
     }
 
+    if (otpCard) {
+        otpCard.classList.toggle("hidden", nextView !== "otp");
+    }
+
     sessionStorage.setItem(AUTH_VIEW_KEY, nextView);
 
     if (shouldRecordHistory && window.history && window.history.pushState) {
         const nextUrl = new URL(window.location.href);
-        nextUrl.hash = nextView === "signup" ? "#signup" : "#signin";
+        nextUrl.hash = nextView === "signup" ? "#signup" : nextView === "otp" ? "#otp" : "#signin";
         window.history.pushState({ authView: nextView }, "", nextUrl);
     }
 
     clearFormErrors(signinForm);
     clearFormErrors(signupForm);
+    if (otpForm) {
+        clearFormErrors(otpForm);
+    }
 }
 
 
+// Restores the correct sign-in, sign-up, or OTP panel after browser navigation.
 window.addEventListener("popstate", function () {
 
     const stateView =
@@ -89,12 +105,131 @@ window.addEventListener("popstate", function () {
         savedView === "signup" ||
         window.location.hash === "#signup" ?
             "signup" :
-            "signin";
+            stateView === "otp" ||
+            savedView === "otp" ||
+            window.location.hash === "#otp" ?
+                "otp" :
+                "signin";
 
     showAuthView(nextView, false);
 
 });
 
+
+// ===============================
+// OTP FLOW
+// ===============================
+
+let activeOtpFlow = null;
+
+function showOtpPage(mode, email) {
+    activeOtpFlow = { mode, email: String(email || "").trim() };
+
+    if (otpEmailInput) {
+        otpEmailInput.value = activeOtpFlow.email;
+    }
+
+    if (otpInput) {
+        otpInput.value = "";
+        otpInput.focus();
+    }
+
+    showAuthView("otp", true);
+}
+
+if (backToSignin) {
+    backToSignin.addEventListener("click", function (event) {
+        event.preventDefault();
+        activeOtpFlow = null;
+        showAuthView("signin");
+    });
+}
+
+if (otpForm) {
+    otpForm.addEventListener("submit", async function (event) {
+        event.preventDefault();
+
+        if (!activeOtpFlow || !activeOtpFlow.email) {
+            showToast("OTP session expired. Please try again.", "error");
+            showAuthView("signin");
+            return;
+        }
+
+        const otpValue = (otpInput ? otpInput.value : "").trim();
+        const otpError = document.getElementById("otpInputError");
+
+        if (!otpValue || !/^\d{6}$/.test(otpValue)) {
+            setError(otpInput, otpError, "Enter the 6-digit OTP.");
+            return;
+        }
+
+        const button = otpForm.querySelector(".btn-primary");
+        button.disabled = true;
+        button.textContent = "Verifying...";
+
+        try {
+            const url = activeOtpFlow.mode === "login"
+                ? `${API_URL}/verify-login-otp`
+                : `${API_URL}/verify-otp`;
+
+            const response = await fetch(url, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    email: activeOtpFlow.email,
+                    otp: otpValue
+                })
+            });
+
+            const data = await response.json().catch(() => ({}));
+
+            if (!response.ok) {
+                showToast(data.message || "Invalid OTP.", "error");
+                return;
+            }
+
+            if (activeOtpFlow.mode === "login") {
+                if (!data.token) {
+                    showToast("Login token was not received.", "error");
+                    return;
+                }
+
+                localStorage.setItem("token", data.token);
+                const loggedInUser = data.user || {};
+                localStorage.setItem("user", JSON.stringify(loggedInUser));
+                showToast("Login successful!", "success");
+                const redirectUrl = getDashboardUrlForUser(loggedInUser);
+                setTimeout(function () {
+                    window.location.href = redirectUrl;
+                }, 500);
+                return;
+            }
+
+            const verifiedEmail = activeOtpFlow.email;
+            sessionStorage.removeItem("pendingVerificationEmail");
+            showToast("Account verified successfully!", "success");
+            otpForm.reset();
+            activeOtpFlow = null;
+            const signupFormLocal = document.getElementById("signupForm");
+            if (signupFormLocal) {
+                signupFormLocal.reset();
+            }
+            const signinEmail = document.getElementById("signinEmail");
+            if (signinEmail) {
+                signinEmail.value = verifiedEmail;
+            }
+            showAuthView("signin");
+        } catch (error) {
+            console.error("OTP VERIFY ERROR:", error);
+            showToast("Cannot connect to the server.", "error");
+        } finally {
+            button.disabled = false;
+            button.textContent = "Verify";
+        }
+    });
+}
 
 // ===============================
 // TOAST MESSAGE
@@ -185,6 +320,7 @@ function clearFormErrors(form) {
 
 if (showSignup) {
 
+    // Opens the sign-up panel when the user selects the registration link.
     showSignup.addEventListener("click", function (event) {
 
         event.preventDefault();
@@ -197,6 +333,7 @@ if (showSignup) {
 
 if (showSignin) {
 
+    // Returns to the sign-in panel when the user selects the login link.
     showSignin.addEventListener("click", function (event) {
 
         event.preventDefault();
@@ -213,6 +350,7 @@ if (showSignin) {
 
 document.querySelectorAll("input, select").forEach((input) => {
 
+    // Clears a field's error message as soon as its value changes.
     input.addEventListener("input", function () {
 
         const error = document.getElementById(
@@ -225,6 +363,7 @@ document.querySelectorAll("input, select").forEach((input) => {
 
     });
 
+    // Also clears validation feedback when a selection changes.
     input.addEventListener("change", function () {
 
         const error = document.getElementById(
@@ -246,6 +385,7 @@ document.querySelectorAll("input, select").forEach((input) => {
 
 if (signupForm) {
 
+    // Validates registration details, creates the account, then verifies its OTP.
     signupForm.addEventListener("submit", async function (event) {
 
         event.preventDefault();
@@ -455,102 +595,13 @@ if (signupForm) {
                 "success"
             );
 
-
             sessionStorage.setItem(
                 "pendingVerificationEmail",
                 email.value.trim()
             );
 
-
-            // ===============================
-            // OTP VERIFICATION
-            // ===============================
-
-            const otp = prompt(
-                "Enter the 6-digit OTP:"
-            );
-
-
-            if (!otp) {
-
-                showToast(
-                    "OTP verification cancelled.",
-                    "error"
-                );
-
-                return;
-            }
-
-
-            const verifyResponse =
-                await fetch(
-                    `${API_URL}/verify-otp`,
-                    {
-                        method: "POST",
-
-                        headers: {
-                            "Content-Type":
-                                "application/json"
-                        },
-
-                        body: JSON.stringify({
-
-                            email:
-                                email.value.trim(),
-
-                            otp:
-                                otp.trim()
-
-                        })
-
-                    }
-                );
-
-
-            const verifyData =
-                await verifyResponse
-                    .json()
-                    .catch(() => ({}));
-
-
-            if (!verifyResponse.ok) {
-
-                showToast(
-                    verifyData.message ||
-                    "Invalid OTP.",
-                    "error"
-                );
-
-                return;
-            }
-
-
-            sessionStorage.removeItem(
-                "pendingVerificationEmail"
-            );
-
-
-            showToast(
-                "Account verified successfully!",
-                "success"
-            );
-
-
-            signupForm.reset();
-
-
-            signupCard.classList.add("hidden");
-            signinCard.classList.remove("hidden");
-
-
-            // Put registered email into login
-            const signinEmail =
-                document.getElementById("signinEmail");
-
-            if (signinEmail) {
-                signinEmail.value =
-                    email.value.trim();
-            }
+            showOtpPage("signup", email.value.trim());
+            return;
 
 
         } catch (error) {
@@ -583,6 +634,7 @@ if (signupForm) {
 
 if (signinForm) {
 
+    // Checks credentials, verifies the login OTP, and opens the user's dashboard.
     signinForm.addEventListener("submit", async function (event) {
 
         event.preventDefault();
@@ -716,123 +768,8 @@ if (signinForm) {
                 "success"
             );
 
-
-            // ===============================
-            // LOGIN OTP
-            // ===============================
-
-            const otp = prompt(
-                "Enter the 6-digit login OTP:"
-            );
-
-
-            if (!otp) {
-
-                showToast(
-                    "Login cancelled.",
-                    "error"
-                );
-
-                return;
-            }
-
-
-            button.textContent =
-                "Verifying OTP...";
-
-
-            const verifyResponse =
-                await fetch(
-                    `${API_URL}/verify-login-otp`,
-                    {
-                        method: "POST",
-
-                        headers: {
-                            "Content-Type":
-                                "application/json"
-                        },
-
-                        body: JSON.stringify({
-
-                            email:
-                                email.value.trim(),
-
-                            otp:
-                                otp.trim()
-
-                        })
-
-                    }
-                );
-
-
-            const verifyData =
-                await verifyResponse
-                    .json()
-                    .catch(() => ({}));
-
-
-            if (!verifyResponse.ok) {
-
-                showToast(
-                    verifyData.message ||
-                    "Invalid or expired OTP.",
-                    "error"
-                );
-
-                return;
-            }
-
-
-            // ===============================
-            // SAVE LOGIN SESSION
-            // ===============================
-
-            if (!verifyData.token) {
-
-                showToast(
-                    "Login token was not received.",
-                    "error"
-                );
-
-                return;
-            }
-
-
-            localStorage.setItem(
-                "token",
-                verifyData.token
-            );
-
-
-            const loggedInUser =
-                verifyData.user || {};
-
-            localStorage.setItem(
-                "user",
-                JSON.stringify(loggedInUser)
-            );
-
-
-            showToast(
-                "Login successful!",
-                "success"
-            );
-
-
-            // ===============================
-            // GO TO THE USER'S DASHBOARD
-            // ===============================
-
-            const redirectUrl =
-                getDashboardUrlForUser(loggedInUser);
-
-            setTimeout(function () {
-
-                window.location.href =
-                    redirectUrl;
-
-            }, 500);
+            showOtpPage("login", email.value.trim());
+            return;
 
 
         } catch (error) {
@@ -867,6 +804,7 @@ if (signinForm) {
 
 if (forgotPasswordLink) {
 
+    // Requests a reset OTP and completes the password recovery flow.
     forgotPasswordLink.addEventListener(
         "click",
         async function (event) {
@@ -1033,6 +971,7 @@ if (forgotPasswordLink) {
 
 window.addEventListener(
     "DOMContentLoaded",
+    // Selects the initial auth panel and redirects an existing signed-in user.
     function () {
 
         const token =

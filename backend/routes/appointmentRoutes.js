@@ -9,6 +9,7 @@ const multer = require("multer");
 const upload = multer({
     storage: multer.memoryStorage(),
     limits: { fileSize: 10 * 1024 * 1024 },
+    // Restricts uploaded appointment attachments to supported document and image types.
     fileFilter: (req, file, cb) => {
         const allowedTypes = [
             "application/pdf",

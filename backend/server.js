@@ -31,7 +31,7 @@ if (missingEnv.length > 0) {
     console.warn(`⚠️ Missing required environment variables: ${missingEnv.join(", ")}`);
 }
 
-const allowedOrigins = (process.env.ALLOWED_ORIGINS || "http://localhost:5500,http://127.0.0.1:5500,https://sigla-tala.netlify.app,https://siglatala.netlify.app,https://siglata.netlify.app").split(",").map((origin) => origin.trim()).filter(Boolean);
+const allowedOrigins = (process.env.ALLOWED_ORIGINS || "https://siglatala.com,https://www.siglatala.com,http://localhost:5500,http://127.0.0.1:5500,https://sigla-tala.netlify.app,https://siglatala.netlify.app,https://siglata.netlify.app").split(",").map((origin) => origin.trim()).filter(Boolean);
 
 // Allows browser requests only from configured frontend domains and local development hosts.
 function isAllowedOrigin(origin) {

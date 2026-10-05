@@ -19,7 +19,8 @@ const sanitizeName = (value) => String(value || "").trim();
 // Requires at least 8 characters, one uppercase letter, one number, and one allowed symbol.
 const isStrongPassword = (value) => /^(?=.*[A-Z])(?=.*\d)(?=.*[_*&%]).{8,}$/.test(value);
 
-// Attempts email delivery without discarding an OTP that has already been saved.
+// Called after the OTP is saved; attempts delivery and returns only whether the email was sent,
+// so a mail-provider failure does not stop the user from entering the saved OTP.
 const trySendOTP = async (email, otp, purpose) => {
     try {
         await sendOTP(email, otp);
@@ -470,10 +471,6 @@ const updateProfile = (req, res) => {
     const fullname = String(req.body.fullname || "").trim();
     const age = Number(req.body.age);
     const gender = String(req.body.gender || "").trim();
-    const isAdmin = String(req.user.role || "").toLowerCase() === "admin";
-    const jobSpecification = isAdmin
-        ? String(req.body.job_specification || "").trim()
-        : null;
 
     if (!fullname || !Number.isInteger(age) || age < 0 || age > 120 || !gender) {
         return res.status(400).json({
@@ -482,14 +479,7 @@ const updateProfile = (req, res) => {
         });
     }
 
-    if (isAdmin && !ADMIN_JOB_SPECIFICATIONS.includes(jobSpecification)) {
-        return res.status(400).json({
-            success: false,
-            message: "Select a valid Job Specification for your admin account."
-        });
-    }
-
-    userModel.updateProfile(req.user.id, fullname, age, gender, jobSpecification, (err, result) => {
+    userModel.updateProfile(req.user.id, fullname, age, gender, (err, result) => {
         if (err) {
             console.error("UPDATE PROFILE ERROR:", err);
             return res.status(500).json({
@@ -505,35 +495,36 @@ const updateProfile = (req, res) => {
             });
         }
 
-        const sendProfileResponse = () => res.status(200).json({
-            success: true,
-            user: {
+        userModel.getProfileById(req.user.id, (profileErr, profileResults) => {
+            if (profileErr) {
+                console.error("GET UPDATED PROFILE ERROR:", profileErr);
+                return res.status(500).json({
+                    success: false,
+                    message: "Profile saved, but the updated record could not be loaded."
+                });
+            }
+
+            const savedUser = profileResults[0] || {
                 id: req.user.id,
                 fullname,
                 age,
                 gender,
-                ...(isAdmin ? { job_specification: jobSpecification } : {})
-            }
-        });
+                role: req.user.role,
+                job_specification: null
+            };
 
-        if (!isAdmin) {
-            return sendProfileResponse();
-        }
-
-        appointmentModel.assignUnassignedAppointmentsByJobSpecification(
-            jobSpecification,
-            (assignmentErr) => {
-                if (assignmentErr) {
-                    console.error("ASSIGN EXISTING APPOINTMENTS ERROR:", assignmentErr);
-                    return res.status(500).json({
-                        success: false,
-                        message: "Profile saved, but existing appointments could not be assigned."
-                    });
+            return res.status(200).json({
+                success: true,
+                user: {
+                    id: savedUser.id,
+                    fullname: savedUser.fullname,
+                    age: savedUser.age,
+                    gender: savedUser.gender,
+                    role: savedUser.role,
+                    job_specification: savedUser.job_specification
                 }
-
-                sendProfileResponse();
-            }
-        );
+            });
+        });
     });
 };
 

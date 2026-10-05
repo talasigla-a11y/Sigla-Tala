@@ -282,23 +282,19 @@ const updatePassword = (email, passwordHash, callback) => {
     db.query(sql, [passwordHash, email], callback);
 };
 
-// Updates profile fields without changing authentication credentials.
-const updateProfile = (userId, fullname, age, gender, jobSpecification, callback) => {
+// Updates profile fields without changing authentication credentials or any system-assigned job specification.
+const updateProfile = (userId, fullname, age, gender, callback) => {
 
     const sql = `
         UPDATE users
         SET
             fullname = ?,
             age = ?,
-            gender = ?,
-            job_specification = CASE
-                WHEN LOWER(TRIM(role)) = 'admin' THEN COALESCE(?, job_specification)
-                ELSE NULL
-            END
+            gender = ?
         WHERE id = ?
     `;
 
-    db.query(sql, [fullname, age, gender, jobSpecification, userId], callback);
+    db.query(sql, [fullname, age, gender, userId], callback);
 };
 
 // Retrieves safe profile fields for the authenticated user's dashboard.

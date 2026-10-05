@@ -2,7 +2,7 @@ const toast = document.getElementById('toast');
 const logOutBtn = document.getElementById('logOutBtn');
 const LOGIN_URL = 'login.html';
 const PATIENT_DASHBOARD_URL = 'patient-dashboard.html';
-const API_BASE_URL = window.SIGLA_TALA_API_URL || 'https://sigla-tala-08i8.onrender.com';
+const API_BASE_URL = window.SIGLA_TALA_API_URL || 'https://api.siglatala.com';
 const INACTIVITY_TIMEOUT_MS = 10 * 60 * 1000;
 
 // Removes stored credentials and user data when an admin signs out.
@@ -40,6 +40,7 @@ function resetInactivityTimer() {
   document.addEventListener(eventName, resetInactivityTimer, { passive: true });
 });
 
+// Clears stored credentials when the browser leaves or reloads the dashboard.
 window.addEventListener('beforeunload', () => {
   if (localStorage.getItem('token')) {
     clearAuthSession();
@@ -128,6 +129,7 @@ function clearErrors(formEl) {
 }
  
 document.querySelectorAll('input, select').forEach((el) => {
+  // Removes a field's validation state after the administrator edits it.
   const handler = () => {
     const errorEl = document.getElementById(el.id + 'Error');
     if (errorEl) clearError(el, errorEl);
@@ -217,6 +219,7 @@ function closeUserDropdown() {
   userMenuTrigger.setAttribute('aria-expanded', 'false');
 }
  
+// Toggles the administrator menu when its trigger is clicked.
 userMenuTrigger.addEventListener('click', (e) => {
   e.stopPropagation();
   if (userDropdown.classList.contains('hidden')) {
@@ -226,15 +229,18 @@ userMenuTrigger.addEventListener('click', (e) => {
   }
 });
  
+// Closes the administrator menu when a click happens outside it.
 document.addEventListener('click', (e) => {
   if (!userMenu.contains(e.target)) closeUserDropdown();
 });
  
 document.querySelectorAll('.user-dropdown-item[data-view]').forEach((btn) => {
+  // Opens the view selected from the administrator menu.
   btn.addEventListener('click', () => showView(btn.dataset.view));
 });
 
 if (logOutBtn) {
+  // Ends the administrator session and returns to the login page.
   logOutBtn.addEventListener('click', () => {
     clearAuthSession();
 
@@ -400,6 +406,7 @@ function renderAnnouncements() {
     .join('');
 
   announcementGrid.querySelectorAll('.card-delete-btn').forEach((btn) => {
+    // Deletes the selected announcement and refreshes the displayed list.
     btn.addEventListener('click', async () => {
       try {
         const response = await fetch(`${API_BASE_URL}/api/announcements/${btn.dataset.id}`, {
@@ -459,17 +466,22 @@ async function loadSavedProfile() {
     document.getElementById('accFullName').value = currentUser.name;
     document.getElementById('accAge').value = currentUser.age;
     document.getElementById('accGender').value = currentUser.gender;
-    document.getElementById('accJobSpecification').value = currentUser.job_specification;
+    const jobSpecField = document.getElementById('accJobSpecification');
+    jobSpecField.value = currentUser.job_specification;
+    jobSpecField.disabled = true;
+    jobSpecField.title = 'Job specification is fixed and can only be changed in the database.';
   } catch (error) {
     console.error('PROFILE LOAD ERROR:', error);
   }
 }
 
+// Opens the form for creating a new announcement.
 newAnnouncementBtn.addEventListener('click', () => {
   announcementFormPanel.classList.remove('hidden');
   document.getElementById('annTitle').focus();
 });
  
+// Discards the current announcement draft and closes its form.
 cancelAnnouncementBtn.addEventListener('click', () => {
   announcementForm.reset();
   clearErrors(announcementForm);
@@ -478,6 +490,7 @@ cancelAnnouncementBtn.addEventListener('click', () => {
 
 const annCloseBtn = document.getElementById('annCloseBtn');
 if (annCloseBtn) {
+  // Closes the announcement form using its close control.
   annCloseBtn.addEventListener('click', () => {
     announcementForm.reset();
     clearErrors(announcementForm);
@@ -485,6 +498,7 @@ if (annCloseBtn) {
   });
 }
  
+// Validates and saves an announcement submitted by the administrator.
 announcementForm.addEventListener('submit', async (e) => {
   e.preventDefault();
   const titleEl = document.getElementById('annTitle');
@@ -589,6 +603,7 @@ function renderCalendar() {
   calendarGrid.innerHTML = cellsHtml;
 
   calendarGrid.querySelectorAll('.calendar-cell:not(.calendar-cell-empty)').forEach((cell) => {
+    // Selects a calendar day and refreshes its appointment details.
     cell.addEventListener('click', () => {
       selectedDateISO = cell.dataset.date;
       renderCalendar();
@@ -645,6 +660,7 @@ function renderDayDetail(dateISO) {
     .join('');
  
   calendarDayList.querySelectorAll('.btn-accept').forEach((btn) => {
+    // Accepts the selected appointment through the backend API.
     btn.addEventListener('click', async () => {
       const appt = appointments.find((a) => a.id === Number(btn.dataset.id));
       if (appt) {
@@ -659,6 +675,7 @@ function renderDayDetail(dateISO) {
   });
 
   calendarDayList.querySelectorAll('.btn-reject').forEach(( btn) => {
+    // Rejects the selected appointment through the backend API.
     btn.addEventListener('click', async () => {
       const appt = appointments.find((a) => a.id === Number(btn.dataset.id));
       if (appt) {
@@ -673,6 +690,7 @@ function renderDayDetail(dateISO) {
   });
 }
  
+// Moves the calendar back one month and redraws it.
 calPrevBtn.addEventListener('click', () => {
   calendarState.month -= 1;
   if (calendarState.month < 0) {
@@ -682,6 +700,7 @@ calPrevBtn.addEventListener('click', () => {
   renderCalendar();
 });
  
+// Moves the calendar forward one month and redraws it.
 calNextBtn.addEventListener('click', () => {
   calendarState.month += 1;
   if (calendarState.month > 11) {
@@ -693,12 +712,12 @@ calNextBtn.addEventListener('click', () => {
  
 // ===================== Account overview =====================
 const accountForm = document.getElementById('accountForm');
+// Saves the administrator's profile details and job specification.
 accountForm.addEventListener('submit', async (e) => {
   e.preventDefault();
   const fullname = document.getElementById('accFullName').value.trim();
   const age = Number(document.getElementById('accAge').value);
   const gender = document.getElementById('accGender').value;
-  const jobSpecification = document.getElementById('accJobSpecification').value;
   const token = localStorage.getItem('token');
 
   try {
@@ -708,7 +727,7 @@ accountForm.addEventListener('submit', async (e) => {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify({ fullname, age, gender, job_specification: jobSpecification }),
+      body: JSON.stringify({ fullname, age, gender }),
     });
     const data = await response.json();
 
@@ -776,6 +795,7 @@ async function loadMedicalReports() {
       <article class="announcement-card"><div class="announcement-date">${escapeReportHTML(report.recorded_date)}</div><h3>${escapeReportHTML(report.patient_name)}</h3><p><strong>${escapeReportHTML(report.diagnostic)}</strong><br>${escapeReportHTML(report.notes)}</p></article>
     `).join('') : '<p class="empty-state">No medical reports encoded yet.</p>';
 
+    // Loads the selected appointment into the medical report editor.
     pendingReportsList.querySelectorAll('.create-report-btn').forEach((button) => button.addEventListener('click', () => openMedicalReportForm(button.dataset)));
   } catch (error) {
     console.error('MEDICAL REPORT LOAD ERROR:', error);
@@ -821,10 +841,14 @@ async function saveMedicalReport(event) {
   }
 }
 
+// Saves the report currently entered in the report form.
 medicalReportForm.addEventListener('submit', saveMedicalReport);
+// Closes the report editor without submitting its contents.
 document.getElementById('cancelMedicalReportBtn').addEventListener('click', () => medicalReportFormPanel.classList.add('hidden'));
+// Closes the report editor from its close control.
 document.getElementById('closeMedicalReportBtn').addEventListener('click', () => medicalReportFormPanel.classList.add('hidden'));
  
+// Switches between the pending appointments and completed report lists.
 tabButtons.forEach((btn) => {
   btn.addEventListener('click', () => {
     tabButtons.forEach((b) => b.classList.toggle('active', b === btn));

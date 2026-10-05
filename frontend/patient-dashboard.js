@@ -2,8 +2,8 @@
 // SIGLA TALA - PATIENT DASHBOARD JS
 // ======================================
 
-// Uses the deployed API by default while allowing a local API URL override.
-const API_BASE_URL = window.SIGLA_TALA_API_URL || "https://sigla-tala-08i8.onrender.com";
+// Uses the production API by default while allowing a local API URL override.
+const API_BASE_URL = window.SIGLA_TALA_API_URL || "https://api.siglatala.com";
 const LOGIN_URL = "login.html";
 const INACTIVITY_TIMEOUT_MS = 10 * 60 * 1000;
 
@@ -42,6 +42,7 @@ function resetInactivityTimer() {
     document.addEventListener(eventName, resetInactivityTimer, { passive: true });
 });
 
+// Clears patient credentials when the browser leaves or reloads the dashboard.
 window.addEventListener("beforeunload", function () {
     if (localStorage.getItem("token")) {
         clearAuthSession();
@@ -328,6 +329,7 @@ function closeUserMenu() {
 
 if (userMenuTrigger) {
 
+    // Opens or closes the patient profile dropdown.
     userMenuTrigger.addEventListener(
         "click",
         function (event) {
@@ -357,6 +359,7 @@ if (userMenuTrigger) {
 // Close menu when clicking outside
 document.addEventListener(
     "click",
+    // Closes the profile dropdown when a click occurs outside the menu.
     function (event) {
 
         if (
@@ -382,6 +385,7 @@ document
     )
     .forEach((button) => {
 
+    // Switches to the view selected from the patient navigation menu.
         button.addEventListener(
             "click",
             function () {
@@ -402,6 +406,7 @@ document
 
 if (logOutBtn) {
 
+    // Clears the patient session and returns to the login screen.
     logOutBtn.addEventListener(
         "click",
         function () {
@@ -741,6 +746,7 @@ const appointmentProvider =
     );
 
 if (appointmentType && appointmentProvider) {
+    // Updates the displayed staff specialty when the appointment type changes.
     appointmentType.addEventListener("change", function () {
         const selectedOption = appointmentType.options[appointmentType.selectedIndex];
         appointmentProvider.textContent = selectedOption.dataset.jobSpecification
@@ -808,6 +814,7 @@ if (appointmentDate) {
 
 if (appointmentFile) {
 
+    // Shows the selected attachment's filename beside the upload control.
     appointmentFile.addEventListener(
         "change",
         function () {
@@ -1073,6 +1080,7 @@ function escapeHTML(value) {
 
 if (appointmentForm) {
 
+    // Validates and submits a new appointment with its optional attachment.
     appointmentForm.addEventListener(
         "submit",
         async function (event) {
@@ -1337,6 +1345,7 @@ const accountForm =
     );
 
 if (accountForm) {
+    // Saves profile changes to the authenticated user's account.
     accountForm.addEventListener(
         "submit",
         async function (event) {
@@ -1385,6 +1394,7 @@ if (accountForm) {
 }
 
 
+// Verifies the patient session, loads dashboard data, and starts announcement refreshes.
 window.addEventListener("DOMContentLoaded", async function () {
     const loggedIn = await checkSession();
     if (!loggedIn) return;

@@ -11,6 +11,7 @@ const jobSpecificationByAppointmentType = {
     other: "Health Care workers"
 };
 
+// Resolves an appointment type to the specialty of its responsible admin.
 const getJobSpecification = (appointmentType) =>
     jobSpecificationByAppointmentType[String(appointmentType).trim().toLowerCase()] || "Health Care workers";
 
