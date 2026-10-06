@@ -16,6 +16,23 @@ const ensureOtherReasonColumn = (callback) => {
     });
 };
 
+// Stores which worker accepted an appointment, separately from its initial assignment.
+const ensureAcceptedByWorkerColumn = (callback) => {
+    db.query("ALTER TABLE appointments ADD COLUMN accepted_by_worker_id INT NULL", (err) => {
+        if (err && err.code !== "ER_DUP_FIELDNAME") return callback(err);
+
+        const backfillSql = `
+            UPDATE appointments
+            SET accepted_by_worker_id = assigned_admin_id
+            WHERE status = 'Accepted'
+              AND accepted_by_worker_id IS NULL
+              AND assigned_admin_id IS NOT NULL
+        `;
+
+        db.query(backfillSql, callback);
+    });
+};
+
 // Creates a separate attachment row for each uploaded appointment file.
 const ensureAttachmentTable = (callback) => {
     const sql = `
@@ -282,12 +299,14 @@ const getAppointmentsByUserId = (userId, callback) => {
             a.appointment_date,
             a.time_preference,
             a.other_reason,
+            accepted_by.fullname AS accepted_by_name,
             a.status,
             a.file_name,
             a.created_at,
             u.fullname AS assigned_admin_name
         FROM appointments a
         LEFT JOIN users u ON u.id = a.assigned_admin_id
+        LEFT JOIN users accepted_by ON accepted_by.id = a.accepted_by_worker_id
         WHERE a.user_id = ?
         ORDER BY a.appointment_date DESC, a.created_at DESC
     `;
@@ -312,6 +331,7 @@ const getAllAppointments = (adminId, callback) => {
             a.appointment_date,
             a.time_preference,
             a.other_reason,
+            accepted_by.fullname AS acceptedByName,
             a.status,
             a.file_name,
             a.created_at,
@@ -321,6 +341,7 @@ const getAllAppointments = (adminId, callback) => {
         FROM appointments a
         LEFT JOIN users patient ON a.user_id = patient.id
         LEFT JOIN users administrator ON a.assigned_admin_id = administrator.id
+        LEFT JOIN users accepted_by ON accepted_by.id = a.accepted_by_worker_id
         WHERE a.assigned_admin_id = ?
         ORDER BY a.appointment_date DESC, a.created_at DESC
     `;
@@ -337,17 +358,19 @@ const getAllAppointments = (adminId, callback) => {
 const updateAppointmentStatus = (appointmentId, status, adminId, callback) => {
     const sql = `
         UPDATE appointments
-        SET status = ?
+        SET status = ?,
+            accepted_by_worker_id = CASE WHEN ? = 'Accepted' THEN ? ELSE NULL END
         WHERE id = ? AND assigned_admin_id = ?
     `;
 
-    db.query(sql, [status, appointmentId, adminId], callback);
+    db.query(sql, [status, status, adminId, appointmentId, adminId], callback);
 };
 
 
 module.exports = {
     addFileColumns,
     ensureOtherReasonColumn,
+    ensureAcceptedByWorkerColumn,
     ensureAttachmentTable,
     ensureJobSpecificationColumn,
     getAdminByJobSpecification,

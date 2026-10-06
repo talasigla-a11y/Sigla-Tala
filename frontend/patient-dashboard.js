@@ -1151,6 +1151,10 @@ function renderAppointments(
                     ? `<br>Reason: ${escapeHTML(appointment.other_reason)}`
                     : "";
 
+                const acceptedBy = appointment.status === "Accepted" && appointment.accepted_by_name
+                    ? `<br>Accepted by: ${escapeHTML(appointment.accepted_by_name)}`
+                    : "";
+
                 return `
 
                     <div class="appointment-item">
@@ -1181,6 +1185,7 @@ function renderAppointments(
                             ${escapeHTML(date)}
                             ·
                             ${escapeHTML(time)}
+                            ${acceptedBy}
                             ${otherReason}
                             ${attachmentNames ? `<br>Attachments: ${attachmentNames}` : ""}
 
