@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Sigla Tala — Admin Portal</title>
+<title>Sigla Tala — Health Worker Portal</title>
 <link rel="stylesheet" href="styles.css">
 </head>
 <body class="app-active">
@@ -19,13 +19,13 @@
       <div class="user-menu" id="userMenu">
         <button class="user-menu-trigger" id="userMenuTrigger" aria-haspopup="true" aria-expanded="false">
           <svg class="icon icon-invert" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="8" r="3.4"/><path d="M4.5 20c1.4-3.6 4.4-5.6 7.5-5.6s6.1 2 7.5 5.6"/></svg>
-          <span id="userMenuName">Admin</span>
+          <span id="userMenuName">Health Worker</span>
           <svg class="icon icon-invert icon-chevron" id="userMenuChevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 9l6 6 6-6"/></svg>
         </button>
  
         <div class="user-dropdown hidden" id="userDropdown">
           <div class="user-dropdown-header">
-            <div class="user-dropdown-name" id="dropdownName">Admin</div>
+            <div class="user-dropdown-name" id="dropdownName">Health Worker</div>
             <div class="user-dropdown-email" id="dropdownEmail">—</div>
           </div>
           <div class="user-dropdown-divider"></div>
@@ -216,7 +216,7 @@
         <div class="role-card">
           <div>
             <div class="role-card-label">Current Role</div>
-            <div class="role-card-value">Admin</div>
+            <div class="role-card-value">Health Worker</div>
           </div>
           <span class="status-pill status-approved">Approved</span>
         </div>
@@ -266,7 +266,7 @@
             <input type="hidden" id="reportAppointmentId">
             <input type="hidden" id="reportUserId">
             <div class="field-pair">
-              <div class="field"><label for="reportDoctorName">Doctor / Admin Name</label><input id="reportDoctorName" required></div>
+              <div class="field"><label for="reportDoctorName">Doctor / Health Worker Name</label><input id="reportDoctorName" required></div>
               <div class="field"><label for="reportDate">Date Recorded</label><input type="date" id="reportDate" required></div>
             </div>
             <div class="field"><label for="reportDiagnostic">Diagnostic</label><input id="reportDiagnostic" required></div>

@@ -8,7 +8,7 @@ const addFileColumns = (callback) => {
     });
 };
 
-// Adds assignment columns and links existing appointments to configured admins.
+// Adds assignment columns and links existing appointments to configured workers.
 const ensureJobSpecificationColumn = (callback) => {
     db.query("ALTER TABLE appointments ADD COLUMN job_specification VARCHAR(100) NULL", (alterErr) => {
         if (alterErr && alterErr.code !== "ER_DUP_FIELDNAME") return callback(alterErr);
@@ -38,7 +38,7 @@ const ensureJobSpecificationColumn = (callback) => {
                                         SET a.assigned_admin_id = (
                                                 SELECT u.id
                                                 FROM users u
-                                                WHERE LOWER(TRIM(u.role)) = 'admin'
+                                                WHERE LOWER(TRIM(u.role)) IN ('worker', 'admin')
                                                     AND LOWER(TRIM(u.job_specification)) = LOWER(TRIM(a.job_specification))
                                                 ORDER BY u.id
                                                 LIMIT 1
@@ -47,7 +47,7 @@ const ensureJobSpecificationColumn = (callback) => {
                                             AND EXISTS (
                                                 SELECT 1
                                                 FROM users u
-                                                WHERE LOWER(TRIM(u.role)) = 'admin'
+                                                WHERE LOWER(TRIM(u.role)) IN ('worker', 'admin')
                                                     AND LOWER(TRIM(u.job_specification)) = LOWER(TRIM(a.job_specification))
                                         )
                 `;
@@ -58,12 +58,12 @@ const ensureJobSpecificationColumn = (callback) => {
     });
 };
 
-// Finds the first administrator configured for an appointment specialty.
+// Finds the first worker configured for an appointment specialty.
 const getAdminByJobSpecification = (jobSpecification, callback) => {
     const sql = `
         SELECT id, fullname, job_specification
         FROM users
-        WHERE LOWER(TRIM(role)) = 'admin'
+        WHERE LOWER(TRIM(role)) IN ('worker','admin')
           AND LOWER(TRIM(job_specification)) = LOWER(TRIM(?))
         ORDER BY id
         LIMIT 1
@@ -72,14 +72,14 @@ const getAdminByJobSpecification = (jobSpecification, callback) => {
     db.query(sql, [jobSpecification], callback);
 };
 
-// Assigns existing unassigned appointments to the first admin for a specialty.
+// Assigns existing unassigned appointments to the first worker for a specialty.
 const assignUnassignedAppointmentsByJobSpecification = (jobSpecification, callback) => {
     const sql = `
         UPDATE appointments
                 SET assigned_admin_id = (
                         SELECT id
                         FROM users
-                        WHERE LOWER(TRIM(role)) = 'admin'
+                        WHERE LOWER(TRIM(role)) IN ('worker','admin')
                             AND LOWER(TRIM(job_specification)) = LOWER(TRIM(?))
                         ORDER BY id
                         LIMIT 1
@@ -89,6 +89,19 @@ const assignUnassignedAppointmentsByJobSpecification = (jobSpecification, callba
     `;
 
         db.query(sql, [jobSpecification, jobSpecification], callback);
+};
+
+// Checks whether a given date and half-hour slot is already booked.
+const getAppointmentByDateAndTime = (appointmentDate, timePreference, callback) => {
+    const sql = `
+        SELECT id, user_id, appointment_date, time_preference
+        FROM appointments
+        WHERE appointment_date = ?
+          AND time_preference = ?
+        LIMIT 1
+    `;
+
+    db.query(sql, [appointmentDate, timePreference], callback);
 };
 
 // ================= CREATE APPOINTMENT =================
@@ -189,6 +202,7 @@ module.exports = {
     ensureJobSpecificationColumn,
     getAdminByJobSpecification,
     assignUnassignedAppointmentsByJobSpecification,
+    getAppointmentByDateAndTime,
     createAppointment,
     getAppointmentsByUserId,
     getAllAppointments,

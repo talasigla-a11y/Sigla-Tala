@@ -34,7 +34,13 @@ const trySendOTP = async (email, otp, purpose) => {
 // Restricts roles to the two application roles; public registration always creates patients.
 const normalizeRole = (input) => {
     const role = String(input || "patient").trim();
-    return ["admin", "patient"].includes(role.toLowerCase()) ? role.toLowerCase() : "patient";
+    const normalized = role.toLowerCase();
+
+    if (normalized === "admin" || normalized === "worker") {
+        return "worker";
+    }
+
+    return normalized === "patient" ? "patient" : "patient";
 };
 
 // ================= REGISTER =================

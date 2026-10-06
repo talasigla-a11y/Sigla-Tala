@@ -602,7 +602,7 @@ async function checkSession() {
 
             if (
                 parsedUser &&
-                String(parsedUser.role || "").toLowerCase() === "admin"
+                ["worker", "admin"].includes(String(parsedUser.role || "").toLowerCase())
             ) {
 
                 window.location.href =
@@ -758,6 +758,11 @@ if (appointmentType && appointmentProvider) {
 const appointmentDate =
     document.getElementById(
         "apptDate"
+    );
+
+const appointmentTime =
+    document.getElementById(
+        "apptTime"
     );
 
 const appointmentFile =
@@ -1107,9 +1112,7 @@ if (appointmentForm) {
 
 
             const selectedTime =
-                document.querySelector(
-                    'input[name="timePref"]:checked'
-                );
+                appointmentTime;
 
 
             let valid = true;
@@ -1160,12 +1163,12 @@ if (appointmentForm) {
 
 
             // Time
-            if (!selectedTime) {
+            if (!selectedTime || !selectedTime.value) {
 
                 if (timeError) {
 
                     timeError.textContent =
-                        "Please select a time preference.";
+                        "Please select a time slot.";
 
                 }
 

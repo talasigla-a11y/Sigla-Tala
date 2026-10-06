@@ -67,16 +67,16 @@ function getStoredUser() {
 
 // Prevents patients from opening the administrator interface in the browser.
 function ensureAdminAccess() {
-  const isDemoMode = new URLSearchParams(window.location.search).get('demo') === 'admin' || localStorage.getItem('demoAdmin') === 'true';
+  const isDemoMode = new URLSearchParams(window.location.search).get('demo') === 'worker' || new URLSearchParams(window.location.search).get('demo') === 'admin' || localStorage.getItem('demoWorker') === 'true' || localStorage.getItem('demoAdmin') === 'true';
 
   if (isDemoMode) {
     const currentDemoUser = {
-      fullname: 'Admin User',
-      email: 'admin@siglatala.com',
-      role: 'admin'
+      fullname: 'Health Worker User',
+      email: 'worker@siglatala.com',
+      role: 'worker'
     };
     localStorage.setItem('user', JSON.stringify(currentDemoUser));
-    localStorage.setItem('demoAdmin', 'true');
+    localStorage.setItem('demoWorker', 'true');
     return true;
   }
 
@@ -89,7 +89,7 @@ function ensureAdminAccess() {
     return false;
   }
 
-  if (role !== 'admin') {
+  if (role !== 'worker' && role !== 'admin') {
     window.location.replace(PATIENT_DASHBOARD_URL);
     return false;
   }
@@ -155,7 +155,7 @@ const views = {
 const storedUser = getStoredUser();
 let currentUser = {
   id: storedUser.id || null,
-  name: storedUser.fullname || storedUser.name || 'Admin',
+  name: storedUser.fullname || storedUser.name || 'Health Worker',
   email: storedUser.email || '',
   age: storedUser.age || '',
   gender: storedUser.gender || '',
@@ -185,7 +185,7 @@ const calendarDayList = document.getElementById('calendarDayList');
  
 // Creates a compact display name for the dashboard header.
 function firstNameFrom(fullName) {
-  return fullName.trim().split(/\s+/)[0] || 'Admin';
+  return fullName.trim().split(/\s+/)[0] || 'Health Worker';
 }
  
 // Switches the admin dashboard between appointments, announcements, and reports.
@@ -256,7 +256,7 @@ if (logOutBtn) {
 // ===================== Load appointments from API =====================
 // Fetches appointments from the protected API and renders the admin table.
 async function loadAppointments() {
-  const isDemoMode = localStorage.getItem('demoAdmin') === 'true';
+  const isDemoMode = localStorage.getItem('demoWorker') === 'true' || localStorage.getItem('demoAdmin') === 'true';
   const token = localStorage.getItem('token');
 
   // In demo mode without a real token, skip API loading
@@ -310,7 +310,7 @@ async function loadAppointments() {
 // Sends the administrator's appointment decision to the backend for persistence.
 async function updateAppointmentStatusAPI(appointmentId, newStatus) {
   const token = localStorage.getItem('token');
-  const isDemoMode = localStorage.getItem('demoAdmin') === 'true';
+  const isDemoMode = localStorage.getItem('demoWorker') === 'true' || localStorage.getItem('demoAdmin') === 'true';
 
   if (!isDemoMode && !token) {
     console.warn('No token available to update appointment');
@@ -353,10 +353,10 @@ async function updateAppointmentStatusAPI(appointmentId, newStatus) {
 async function initApp() {
 
   const demoUser = getStoredUser();
-  if (demoUser && demoUser.role === 'admin' && !currentUser.email) {
+  if ((demoUser && (demoUser.role === 'worker' || demoUser.role === 'admin')) && !currentUser.email) {
     currentUser = {
       id: demoUser.id || null,
-      name: demoUser.fullname || demoUser.name || 'Admin',
+      name: demoUser.fullname || demoUser.name || 'Health Worker',
       email: demoUser.email || '',
       age: demoUser.age || '',
       gender: demoUser.gender || '',
@@ -518,7 +518,7 @@ announcementForm.addEventListener('submit', async (e) => {
   if (!valid) return;
 
   const token = localStorage.getItem('token');
-  const isDemoMode = localStorage.getItem('demoAdmin') === 'true';
+  const isDemoMode = localStorage.getItem('demoWorker') === 'true' || localStorage.getItem('demoAdmin') === 'true';
 
   try {
     const response = await fetch(`${API_BASE_URL}/api/announcements`, {

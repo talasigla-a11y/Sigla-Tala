@@ -1,0 +1,121 @@
+<svg width="1600" height="1000" viewBox="0 0 1600 1000" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">Sigla Tala Health Worker Entity Relationship Diagram</title>
+  <desc id="desc">ERD showing users, appointments, medical reports, and announcements for the Sigla Tala health worker system.</desc>
+
+  <defs>
+    <linearGradient id="bg" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0%" stop-color="#f4f8ff"/>
+      <stop offset="100%" stop-color="#eef6f4"/>
+    </linearGradient>
+    <linearGradient id="headerGrad" x1="0" x2="1">
+      <stop offset="0%" stop-color="#1d4ed8"/>
+      <stop offset="100%" stop-color="#0f766e"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="160%">
+      <feDropShadow dx="0" dy="8" stdDeviation="10" flood-color="#0f172a" flood-opacity="0.12"/>
+    </filter>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+      <path d="M0,0 L12,6 L0,12 z" fill="#475569"/>
+    </marker>
+    <style>
+      .title { font: 700 34px 'Segoe UI', Arial, sans-serif; fill: #0f172a; }
+      .subtitle { font: 600 16px 'Segoe UI', Arial, sans-serif; fill: #475569; }
+      .entity-title { font: 700 28px 'Segoe UI', Arial, sans-serif; fill: #0f172a; }
+      .field { font: 500 15px 'Segoe UI', Arial, sans-serif; fill: #1f2937; }
+      .label { font: 600 15px 'Segoe UI', Arial, sans-serif; fill: #334155; }
+      .entity-box { fill: #ffffff; stroke: #cbd5e1; stroke-width: 2; rx: 18; filter: url(#shadow); }
+      .header { fill: url(#headerGrad); }
+    </style>
+  </defs>
+
+  <rect width="1600" height="1000" fill="url(#bg)"/>
+
+  <text x="60" y="70" class="title">Sigla Tala</text>
+  <text x="60" y="102" class="subtitle">Health Worker Entity Relationship Diagram</text>
+
+  <g id="users" transform="translate(70,150)">
+    <rect class="entity-box" width="420" height="420"/>
+    <rect class="header" width="420" height="52" rx="18"/>
+    <text x="210" y="34" text-anchor="middle" class="entity-title" fill="#ffffff">users</text>
+
+    <text x="28" y="90" class="field"><tspan fill="#0f766e" font-weight="700">PK</tspan> id INT</text>
+    <text x="28" y="125" class="field">fullname VARCHAR(255)</text>
+    <text x="28" y="160" class="field">age INT</text>
+    <text x="28" y="195" class="field">gender VARCHAR(50)</text>
+    <text x="28" y="230" class="field">email VARCHAR(255) UNIQUE</text>
+    <text x="28" y="265" class="field">role VARCHAR(50)</text>
+    <text x="28" y="300" class="field">job_specification VARCHAR(100)</text>
+    <text x="28" y="335" class="field">password VARCHAR(255)</text>
+    <text x="28" y="370" class="field">otp VARCHAR(255)</text>
+    <text x="28" y="405" class="field">is_verified TINYINT(1)</text>
+
+    <text x="225" y="90" class="field">login_otp VARCHAR(255)</text>
+    <text x="225" y="125" class="field">login_otp_expires DATETIME</text>
+    <text x="225" y="160" class="field">reset_otp VARCHAR(255)</text>
+    <text x="225" y="195" class="field">reset_otp_expires DATETIME</text>
+    <text x="225" y="230" class="field">created_at TIMESTAMP</text>
+    <text x="225" y="265" class="field">updated_at TIMESTAMP</text>
+  </g>
+
+  <g id="appointments" transform="translate(610,150)">
+    <rect class="entity-box" width="460" height="430"/>
+    <rect class="header" width="460" height="52" rx="18"/>
+    <text x="230" y="34" text-anchor="middle" class="entity-title" fill="#ffffff">appointments</text>
+
+    <text x="28" y="90" class="field"><tspan fill="#0f766e" font-weight="700">PK</tspan> id INT</text>
+    <text x="28" y="125" class="field"><tspan fill="#0f766e" font-weight="700">FK</tspan> user_id INT</text>
+    <text x="28" y="160" class="field">appointment_type VARCHAR(255)</text>
+    <text x="28" y="195" class="field">job_specification VARCHAR(100)</text>
+    <text x="28" y="230" class="field"><tspan fill="#0f766e" font-weight="700">FK</tspan> assigned_health_worker_id INT</text>
+    <text x="28" y="265" class="field">appointment_date DATE</text>
+    <text x="28" y="300" class="field">time_preference TIME</text>
+    <text x="28" y="335" class="field">status VARCHAR(50)</text>
+    <text x="28" y="370" class="field">file_name VARCHAR(255)</text>
+    <text x="28" y="405" class="field">file_data MEDIUMBLOB</text>
+
+    <text x="260" y="90" class="field">created_at TIMESTAMP</text>
+    <text x="260" y="125" class="field">updated_at TIMESTAMP</text>
+  </g>
+
+  <g id="medical_reports" transform="translate(610,660)">
+    <rect class="entity-box" width="460" height="230"/>
+    <rect class="header" width="460" height="52" rx="18"/>
+    <text x="230" y="34" text-anchor="middle" class="entity-title" fill="#ffffff">medical_reports</text>
+
+    <text x="28" y="90" class="field"><tspan fill="#0f766e" font-weight="700">PK</tspan> id INT</text>
+    <text x="28" y="125" class="field"><tspan fill="#0f766e" font-weight="700">FK</tspan> appointment_id INT</text>
+    <text x="28" y="160" class="field"><tspan fill="#0f766e" font-weight="700">FK</tspan> user_id INT</text>
+    <text x="28" y="195" class="field">doctor_name VARCHAR(100)</text>
+
+    <text x="260" y="90" class="field">recorded_date DATE</text>
+    <text x="260" y="125" class="field">diagnostic VARCHAR(255)</text>
+    <text x="260" y="160" class="field">notes TEXT</text>
+    <text x="260" y="195" class="field">created_at TIMESTAMP</text>
+  </g>
+
+  <g id="announcements" transform="translate(70,660)">
+    <rect class="entity-box" width="420" height="190"/>
+    <rect class="header" width="420" height="52" rx="18"/>
+    <text x="210" y="34" text-anchor="middle" class="entity-title" fill="#ffffff">announcements</text>
+
+    <text x="28" y="90" class="field"><tspan fill="#0f766e" font-weight="700">PK</tspan> id INT</text>
+    <text x="28" y="130" class="field">title VARCHAR(255)</text>
+    <text x="28" y="170" class="field">content TEXT</text>
+    <text x="225" y="90" class="field">created_at TIMESTAMP</text>
+  </g>
+
+  <g id="relationships">
+    <path d="M 490 315 C 560 315, 565 315, 610 315" fill="none" stroke="#475569" stroke-width="3" marker-end="url(#arrow)"/>
+    <path d="M 490 400 C 560 400, 565 400, 610 400" fill="none" stroke="#475569" stroke-width="3" marker-end="url(#arrow)"/>
+    <path d="M 1070 580 C 1070 620, 1070 630, 1070 660" fill="none" stroke="#475569" stroke-width="3" marker-end="url(#arrow)"/>
+    <path d="M 250 570 C 250 620, 250 630, 250 660" fill="none" stroke="#475569" stroke-width="3" marker-end="url(#arrow)"/>
+
+    <text x="525" y="300" class="label">users.id → appointments.user_id</text>
+    <text x="525" y="388" class="label">users.id → appointments.assigned_health_worker_id</text>
+    <text x="1090" y="625" class="label">appointments.id → medical_reports.appointment_id</text>
+    <text x="280" y="625" class="label">No FK</text>
+
+    <path d="M 490 495 C 650 495, 650 760, 610 760" fill="none" stroke="#475569" stroke-width="3" marker-end="url(#arrow)"/>
+    <text x="520" y="475" class="label">users.id → medical_reports.user_id</text>
+  </g>
+</svg>

@@ -42,53 +42,70 @@ const createAppointment = (req, res) => {
 
         const job_specification = getJobSpecification(appointment_type);
 
-        appointmentModel.getAdminByJobSpecification(job_specification, (adminErr, admins) => {
-            if (adminErr) {
-                console.error("FIND APPOINTMENT ADMIN ERROR:", adminErr);
+        appointmentModel.getAppointmentByDateAndTime(appointment_date, time_preference, (slotErr, slotResults) => {
+            if (slotErr) {
+                console.error("CHECK TIMESLOT ERROR:", slotErr);
                 return res.status(500).json({
                     success: false,
-                    message: "Failed to find an administrator for this appointment type."
+                    message: "Failed to check appointment availability."
                 });
             }
 
-            if (!admins.length) {
+            if (slotResults.length > 0) {
                 return res.status(409).json({
                     success: false,
-                    message: `No admin is configured for ${job_specification} appointments. Ask an administrator to set their Job Specification.`
+                    message: `This time slot is already booked for ${appointment_date}. Please choose a different time.`
                 });
             }
 
-            const assignedAdmin = admins[0];
-            const appointment = {
-                user_id,
-                appointment_type,
-                job_specification,
-                assigned_admin_id: assignedAdmin.id,
-                assigned_admin_name: assignedAdmin.fullname,
-                appointment_date,
-                time_preference,
-                file_name: req.file ? req.file.originalname : null,
-                file_data: req.file ? req.file.buffer : null
-            };
-
-            appointmentModel.createAppointment(appointment, (err, result) => {
-                if (err) {
-                    console.error("CREATE APPOINTMENT ERROR:", err);
-
+            appointmentModel.getAdminByJobSpecification(job_specification, (adminErr, admins) => {
+                if (adminErr) {
+                    console.error("FIND APPOINTMENT ADMIN ERROR:", adminErr);
                     return res.status(500).json({
                         success: false,
-                        message: "Failed to create appointment."
+                        message: "Failed to find a worker for this appointment type."
                     });
                 }
 
-                return res.status(201).json({
-                    success: true,
-                    message: "Appointment created successfully!",
-                    appointment: {
-                        id: result.insertId,
-                        ...appointment,
-                        status: "Pending"
+                if (!admins.length) {
+                    return res.status(409).json({
+                        success: false,
+                        message: `No worker is configured for ${job_specification} appointments. Ask a worker to set their Job Specification.`
+                    });
+                }
+
+                const assignedAdmin = admins[0];
+                const appointment = {
+                    user_id,
+                    appointment_type,
+                    job_specification,
+                    assigned_admin_id: assignedAdmin.id,
+                    assigned_admin_name: assignedAdmin.fullname,
+                    appointment_date,
+                    time_preference,
+                    file_name: req.file ? req.file.originalname : null,
+                    file_data: req.file ? req.file.buffer : null
+                };
+
+                appointmentModel.createAppointment(appointment, (err, result) => {
+                    if (err) {
+                        console.error("CREATE APPOINTMENT ERROR:", err);
+
+                        return res.status(500).json({
+                            success: false,
+                            message: "Failed to create appointment."
+                        });
                     }
+
+                    return res.status(201).json({
+                        success: true,
+                        message: "Appointment created successfully!",
+                        appointment: {
+                            id: result.insertId,
+                            ...appointment,
+                            status: "Pending"
+                        }
+                    });
                 });
             });
         });
