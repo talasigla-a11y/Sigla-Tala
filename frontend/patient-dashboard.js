@@ -1104,15 +1104,10 @@ if (appointmentForm) {
                     "apptDateError"
                 );
 
-
             const timeError =
                 document.getElementById(
-                    "timePrefError"
+                    "apptTimeError"
                 );
-
-
-            const selectedTime =
-                appointmentTime;
 
 
             let valid = true;
@@ -1161,14 +1156,16 @@ if (appointmentForm) {
 
             }
 
-
-            // Time
-            if (!selectedTime || !selectedTime.value) {
+            // Time preference
+            if (
+                !appointmentTime ||
+                !appointmentTime.value
+            ) {
 
                 if (timeError) {
 
                     timeError.textContent =
-                        "Please select a time slot.";
+                        "Please select a time preference.";
 
                 }
 
@@ -1224,7 +1221,7 @@ if (appointmentForm) {
                 const appointmentData = new FormData();
                 appointmentData.append("appointment_type", selectedOption.text);
                 appointmentData.append("appointment_date", appointmentDate.value);
-                appointmentData.append("time_preference", selectedTime.value);
+                appointmentData.append("time_preference", appointmentTime ? appointmentTime.value : "");
                 if (appointmentFile && appointmentFile.files.length) {
                     appointmentData.append("attachment", appointmentFile.files[0]);
                 }
