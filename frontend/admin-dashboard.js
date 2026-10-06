@@ -797,15 +797,19 @@ function escapeReportHTML(value) {
   return String(value || '').replace(/[&<>"']/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[character]));
 }
 
-// Retrieves pending and completed medical reports for the admin view.
+// Retrieves pending and completed medical reports for the signed-in worker.
 async function loadMedicalReports() {
   try {
+    const headers = { Authorization: `Bearer ${localStorage.getItem('token') || ''}` };
     const [pendingResponse, reportsResponse] = await Promise.all([
-      fetch(`${API_BASE_URL}/api/medical-reports/pending`),
-      fetch(`${API_BASE_URL}/api/medical-reports`),
+      fetch(`${API_BASE_URL}/api/medical-reports/pending`, { headers }),
+      fetch(`${API_BASE_URL}/api/medical-reports`, { headers }),
     ]);
     const pendingData = await pendingResponse.json();
     const reportsData = await reportsResponse.json();
+    if (!pendingResponse.ok || !reportsResponse.ok) {
+      throw new Error(pendingData.message || reportsData.message || 'Failed to load medical reports.');
+    }
     const pending = pendingData.appointments || [];
     const reports = reportsData.reports || [];
     pendingReportsCount.textContent = pending.length;
@@ -817,7 +821,7 @@ async function loadMedicalReports() {
           <div class="day-patient-type">${escapeReportHTML(item.file_name || 'No file attached')}</div>
           <div class="day-patient-time">${escapeReportHTML(item.appointment_date)} - ${escapeReportHTML(item.time_preference)}</div>
         </div>
-        <button type="button" class="btn-primary create-report-btn" data-appointment-id="${item.appointment_id}" data-user-id="${item.user_id}" data-patient="${escapeReportHTML(item.patient_name)}">Create Report</button>
+        <button type="button" class="btn-primary create-report-btn" data-appointment-id="${item.appointment_id}" data-user-id="${item.user_id}" data-patient="${escapeReportHTML(item.patient_name)}" data-files="${escapeReportHTML(item.file_name || 'No file attached')}">Create Report</button>
       </div>`).join('') : '<p class="empty-state">No pending reports to encode.</p>';
 
     medicalReportsList.innerHTML = reports.length ? reports.map((report) => `
@@ -834,11 +838,20 @@ async function loadMedicalReports() {
 
 // Opens the report editor with the selected patient's appointment information.
 function openMedicalReportForm(data) {
+  medicalReportForm.reset();
+  const now = new Date();
+  const todayISO = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
   document.getElementById('reportAppointmentId').value = data.appointmentId;
   document.getElementById('reportUserId').value = data.userId;
   document.getElementById('reportPatientContext').textContent = `Report for ${data.patient}`;
+  document.getElementById('reportSourcePatient').textContent = data.patient;
+  document.getElementById('reportSourceFiles').textContent = data.files || 'No file attached';
   document.getElementById('reportDoctorName').value = currentUser.name;
-  document.getElementById('reportDate').value = new Date().toISOString().split('T')[0];
+  document.getElementById('reportDate').value = todayISO;
+  document.getElementById('reportFollowUpDate').min = todayISO;
+  document.getElementById('reportFollowUpDate').required = false;
+  document.getElementById('reportFollowUpTime').required = false;
+  document.getElementById('reportFollowUpFields').classList.add('hidden');
   medicalReportFormPanel.classList.remove('hidden');
 }
 
@@ -846,9 +859,13 @@ function openMedicalReportForm(data) {
 async function saveMedicalReport(event) {
   event.preventDefault();
   try {
+    const followUpEnabled = document.getElementById('reportFollowUp').checked;
     const response = await fetch(`${API_BASE_URL}/api/medical-reports`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${localStorage.getItem('token') || ''}`,
+      },
       body: JSON.stringify({
         appointment_id: document.getElementById('reportAppointmentId').value,
         user_id: document.getElementById('reportUserId').value,
@@ -856,13 +873,21 @@ async function saveMedicalReport(event) {
         recorded_date: document.getElementById('reportDate').value,
         diagnostic: document.getElementById('reportDiagnostic').value.trim(),
         notes: document.getElementById('reportNotes').value.trim(),
+        follow_up: {
+          enabled: followUpEnabled,
+          date: document.getElementById('reportFollowUpDate').value,
+          time: document.getElementById('reportFollowUpTime').value,
+        },
       }),
     });
     const data = await response.json();
     if (!response.ok) throw new Error(data.message || 'Failed to save medical report.');
     medicalReportForm.reset();
+    document.getElementById('reportFollowUpDate').required = false;
+    document.getElementById('reportFollowUpTime').required = false;
     medicalReportFormPanel.classList.add('hidden');
-    showToast(data.emailSent === false ? 'Report saved, but email failed.' : 'Report saved and emailed to the patient.', data.emailSent === false ? 'error' : 'success');
+    const emailFailed = data.emailSent === false || data.receiptEmailSent === false;
+    showToast(data.message || (emailFailed ? 'Report saved, but an email failed.' : 'Report saved and emailed to the patient.'), emailFailed ? 'error' : 'success');
     loadMedicalReports();
   } catch (error) {
     console.error('MEDICAL REPORT SAVE ERROR:', error);
@@ -876,6 +901,13 @@ medicalReportForm.addEventListener('submit', saveMedicalReport);
 document.getElementById('cancelMedicalReportBtn').addEventListener('click', () => medicalReportFormPanel.classList.add('hidden'));
 // Closes the report editor from its close control.
 document.getElementById('closeMedicalReportBtn').addEventListener('click', () => medicalReportFormPanel.classList.add('hidden'));
+document.getElementById('reportFollowUp').addEventListener('change', (event) => {
+  const fields = document.getElementById('reportFollowUpFields');
+  const enabled = event.target.checked;
+  fields.classList.toggle('hidden', !enabled);
+  document.getElementById('reportFollowUpDate').required = enabled;
+  document.getElementById('reportFollowUpTime').required = enabled;
+});
  
 // Switches between the pending appointments and completed report lists.
 tabButtons.forEach((btn) => {

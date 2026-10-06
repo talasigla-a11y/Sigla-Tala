@@ -258,19 +258,64 @@
       </div>
 
       <div class="announcement-modal hidden" id="medicalReportFormPanel">
-        <div class="announcement-modal-card">
+        <div class="medical-report-modal-card">
           <button type="button" class="modal-close" id="closeMedicalReportBtn" aria-label="Close medical report form">✕</button>
           <h3 class="panel-subtitle">Encode Medical Report</h3>
-          <p id="reportPatientContext" class="field-hint"></p>
-          <form id="medicalReportForm" novalidate>
+          <section class="report-source-context" aria-live="polite">
+            <p>Creating report based on files submitted by:</p>
+            <strong id="reportSourcePatient"></strong>
+            <p class="report-source-files">Files Uploaded: <span id="reportSourceFiles">No file attached</span></p>
+            <p id="reportPatientContext" class="field-hint"></p>
+          </section>
+          <form id="medicalReportForm">
             <input type="hidden" id="reportAppointmentId">
             <input type="hidden" id="reportUserId">
             <div class="field-pair">
-              <div class="field"><label for="reportDoctorName">Doctor / Health Worker Name</label><input id="reportDoctorName" required></div>
+              <div class="field"><label for="reportDoctorName">Doctor / Health Worker Name</label><input id="reportDoctorName" required readonly></div>
               <div class="field"><label for="reportDate">Date Recorded</label><input type="date" id="reportDate" required></div>
             </div>
-            <div class="field"><label for="reportDiagnostic">Diagnostic</label><input id="reportDiagnostic" required></div>
-            <div class="field"><label for="reportNotes">Medical Notes</label><textarea id="reportNotes" rows="5" required></textarea></div>
+            <div class="field"><label for="reportDiagnostic">Diagnosis</label><input id="reportDiagnostic" placeholder="e.g., Viral infection, normal pregnancy, rabies exposure" required></div>
+            <div class="field"><label for="reportNotes">Medical Notes</label><textarea id="reportNotes" rows="5" placeholder="Enter detailed observations, prescriptions, and next steps..." required></textarea></div>
+            <fieldset class="follow-up-option">
+              <legend>Follow-up</legend>
+              <label class="follow-up-toggle" for="reportFollowUp">
+                <input type="checkbox" id="reportFollowUp">
+                <span>Schedule a follow-up check-up</span>
+              </label>
+              <p class="field-hint">The follow-up will be automatically accepted and a verified receipt will be emailed to the patient with this diagnosis and medical notes.</p>
+              <div class="field-pair hidden" id="reportFollowUpFields">
+                <div class="field">
+                  <label for="reportFollowUpDate">Follow-up Date</label>
+                  <input type="date" id="reportFollowUpDate">
+                </div>
+                <div class="field">
+                  <label for="reportFollowUpTime">Follow-up Time</label>
+                  <select id="reportFollowUpTime">
+                    <option value="" disabled selected>Select a time slot...</option>
+                    <option value="7:00 - 7:30">7:00 - 7:30</option>
+                    <option value="7:30 - 8:00">7:30 - 8:00</option>
+                    <option value="8:00 - 8:30">8:00 - 8:30</option>
+                    <option value="8:30 - 9:00">8:30 - 9:00</option>
+                    <option value="9:00 - 9:30">9:00 - 9:30</option>
+                    <option value="9:30 - 10:00">9:30 - 10:00</option>
+                    <option value="10:00 - 10:30">10:00 - 10:30</option>
+                    <option value="10:30 - 11:00">10:30 - 11:00</option>
+                    <option value="11:00 - 11:30">11:00 - 11:30</option>
+                    <option value="11:30 - 12:00">11:30 - 12:00</option>
+                    <option value="12:00 - 12:30">12:00 - 12:30</option>
+                    <option value="12:30 - 1:00">12:30 - 1:00</option>
+                    <option value="1:00 - 1:30">1:00 - 1:30</option>
+                    <option value="1:30 - 2:00">1:30 - 2:00</option>
+                    <option value="2:00 - 2:30">2:00 - 2:30</option>
+                    <option value="2:30 - 3:00">2:30 - 3:00</option>
+                    <option value="3:00 - 3:30">3:00 - 3:30</option>
+                    <option value="3:30 - 4:00">3:30 - 4:00</option>
+                    <option value="4:00 - 4:30">4:00 - 4:30</option>
+                    <option value="4:30 - 5:00">4:30 - 5:00</option>
+                  </select>
+                </div>
+              </div>
+            </fieldset>
             <div class="form-actions"><button type="button" class="btn-secondary" id="cancelMedicalReportBtn">Cancel</button><button type="submit" class="btn-primary">Save Medical Report</button></div>
           </form>
         </div>

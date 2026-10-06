@@ -1627,6 +1627,188 @@ button {
   font-size: 13px;
 }
 
+#medicalReportFormPanel {
+  background: rgba(15, 23, 42, 0.28);
+  z-index: 1100;
+}
+
+.medical-report-modal-card {
+  position: relative;
+  width: min(1000px, 100%);
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+  padding: 26px 28px 22px;
+  border: 1px solid #dce4ec;
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: 0 8px 28px rgba(20, 30, 40, 0.14);
+}
+
+.medical-report-modal-card .panel-subtitle {
+  margin: 0 0 16px;
+  font-size: 22px;
+}
+
+.medical-report-modal-card .modal-close {
+  position: absolute;
+  top: 16px;
+  right: 18px;
+  border: 0;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 21px;
+}
+
+.report-source-context {
+  margin-bottom: 20px;
+  padding: 14px;
+  border: 1px solid #dce4ec;
+  border-radius: 8px;
+  background: #f7f9fb;
+  color: #334155;
+}
+
+.report-source-context > p:first-child {
+  margin: 0 0 6px;
+  font-size: 12px;
+}
+
+.report-source-context > strong {
+  display: block;
+  font-size: 15px;
+}
+
+.report-source-context .report-source-files {
+  margin: 8px 0 0;
+  color: var(--green);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.report-source-context .field-hint {
+  margin: 8px 0 0;
+}
+
+#medicalReportForm {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+#medicalReportForm .field-pair {
+  display: flex;
+  gap: 18px;
+  margin: 0;
+}
+
+#medicalReportForm .field-pair > .field {
+  flex: 1;
+  min-width: 0;
+}
+
+#medicalReportForm .field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+}
+
+#medicalReportForm label,
+#medicalReportForm legend {
+  color: #334155;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+#medicalReportForm input:not([type="checkbox"]),
+#medicalReportForm select,
+#medicalReportForm textarea {
+  width: 100%;
+  min-height: 42px;
+  padding: 9px 11px;
+  border: 1px solid #cbd5e1;
+  border-radius: 7px;
+  background: #fff;
+  color: var(--text-dark);
+  font: inherit;
+  font-size: 13px;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
+}
+
+#medicalReportForm textarea {
+  min-height: 120px;
+  resize: vertical;
+}
+
+#medicalReportForm input:focus,
+#medicalReportForm select:focus,
+#medicalReportForm textarea:focus {
+  border-color: var(--green);
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(30, 142, 90, 0.12);
+}
+
+.follow-up-option {
+  margin: 0;
+  padding: 14px;
+  border: 1px solid #dce4ec;
+  border-radius: 8px;
+  background: #f9fbfa;
+}
+
+.follow-up-option legend {
+  padding: 0 5px;
+}
+
+.follow-up-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px !important;
+}
+
+.follow-up-toggle input {
+  accent-color: var(--green);
+}
+
+.follow-up-option > .field-hint {
+  margin: 6px 0 12px;
+  line-height: 1.45;
+}
+
+#reportFollowUpFields.hidden {
+  display: none;
+}
+
+#medicalReportForm .form-actions {
+  margin-top: 4px;
+}
+
+#medicalReportForm .form-actions .btn-primary {
+  width: auto;
+  min-width: 190px;
+  margin-top: 0;
+}
+
+@media (max-width: 600px) {
+  .medical-report-modal-card {
+    padding: 22px 18px 18px;
+  }
+
+  #medicalReportForm .field-pair {
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  #medicalReportForm .form-actions {
+    flex-direction: column-reverse;
+  }
+
+  #medicalReportForm .form-actions button {
+    width: 100%;
+  }
+}
+
 .field-trio {
   display: flex;
 

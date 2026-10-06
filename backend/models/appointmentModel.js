@@ -21,7 +21,8 @@ const ensureAcceptedByWorkerColumn = (callback) => {
     const addColumns = [
         "ALTER TABLE appointments ADD COLUMN accepted_by_worker_id INT NULL",
         "ALTER TABLE appointments ADD COLUMN receipt_token_hash CHAR(64) NULL",
-        "ALTER TABLE appointments ADD COLUMN receipt_email_sent_at DATETIME NULL"
+        "ALTER TABLE appointments ADD COLUMN receipt_email_sent_at DATETIME NULL",
+        "ALTER TABLE appointments ADD COLUMN follow_up_report_id INT NULL"
     ];
 
     const addNextColumn = (index) => {
@@ -404,10 +405,13 @@ const prepareAcceptedAppointmentReceipt = (appointmentId, workerId, tokenHash, c
                 a.receipt_token_hash,
                 patient.fullname AS patient_name,
                 patient.email AS patient_email,
-                worker.fullname AS accepted_by_name
+                worker.fullname AS accepted_by_name,
+                report.diagnostic,
+                report.notes
             FROM appointments a
             JOIN users patient ON patient.id = a.user_id
             JOIN users worker ON worker.id = a.accepted_by_worker_id
+            LEFT JOIN medical_reports report ON report.id = a.follow_up_report_id
             WHERE a.id = ?
               AND a.status = 'Accepted'
               AND a.accepted_by_worker_id = ?
@@ -432,10 +436,13 @@ const getAppointmentReceiptByToken = (appointmentId, tokenHash, callback) => {
             a.job_specification,
             a.status,
             patient.fullname AS patient_name,
-            worker.fullname AS accepted_by_name
+            worker.fullname AS accepted_by_name,
+            report.diagnostic,
+            report.notes
         FROM appointments a
         JOIN users patient ON patient.id = a.user_id
         LEFT JOIN users worker ON worker.id = a.accepted_by_worker_id
+        LEFT JOIN medical_reports report ON report.id = a.follow_up_report_id
         WHERE a.id = ?
           AND a.status = 'Accepted'
           AND a.receipt_token_hash = ?

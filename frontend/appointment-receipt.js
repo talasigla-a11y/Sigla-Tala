@@ -28,6 +28,14 @@ function showVerifiedReceipt(receipt) {
     Object.entries(fields).forEach(([id, value]) => {
         document.getElementById(id).textContent = value || "Not provided";
     });
+    if (receipt.diagnosis) {
+        document.getElementById("receiptDiagnosis").textContent = receipt.diagnosis;
+        document.getElementById("receiptDiagnosisRow").classList.remove("hidden");
+    }
+    if (receipt.medical_notes) {
+        document.getElementById("receiptMedicalNotes").textContent = receipt.medical_notes;
+        document.getElementById("receiptMedicalNotesRow").classList.remove("hidden");
+    }
 
     loadingMessage.classList.add("hidden");
     verifiedSection.classList.remove("hidden");
