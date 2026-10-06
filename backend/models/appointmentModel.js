@@ -8,6 +8,40 @@ const addFileColumns = (callback) => {
     });
 };
 
+// Creates a separate attachment row for each uploaded appointment file.
+const ensureAttachmentTable = (callback) => {
+    const sql = `
+        CREATE TABLE IF NOT EXISTS appointment_attachments (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            appointment_id INT NOT NULL,
+            file_name VARCHAR(255) NOT NULL,
+            file_data MEDIUMBLOB NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_appointment_attachments_appointment_id (appointment_id)
+        )
+    `;
+
+    db.query(sql, (createErr) => {
+        if (createErr) return callback(createErr);
+
+        const migrateSql = `
+            INSERT INTO appointment_attachments (appointment_id, file_name, file_data)
+            SELECT a.id, a.file_name, a.file_data
+            FROM appointments a
+            WHERE a.file_name IS NOT NULL
+              AND a.file_data IS NOT NULL
+              AND NOT EXISTS (
+                  SELECT 1
+                  FROM appointment_attachments aa
+                  WHERE aa.appointment_id = a.id
+                    AND aa.file_name = a.file_name
+              )
+        `;
+
+        db.query(migrateSql, callback);
+    });
+};
+
 // Adds assignment columns and links existing appointments to configured workers.
 const ensureJobSpecificationColumn = (callback) => {
     db.query("ALTER TABLE appointments ADD COLUMN job_specification VARCHAR(100) NULL", (alterErr) => {
@@ -105,7 +139,7 @@ const getAppointmentByDateAndTime = (appointmentDate, timePreference, callback) 
 };
 
 // ================= CREATE APPOINTMENT =================
-// Inserts an appointment and stores an optional uploaded file in the database.
+// Inserts an appointment and all uploaded files as one transaction.
 const createAppointment = (appointment, callback) => {
     const sql = `
         INSERT INTO appointments
@@ -123,20 +157,105 @@ const createAppointment = (appointment, callback) => {
         VALUES (?, ?, ?, ?, ?, ?, 'Pending', ?, ?)
     `;
 
-    db.query(
-        sql,
-        [
-            appointment.user_id,
-            appointment.appointment_type,
-            appointment.job_specification,
-            appointment.assigned_admin_id,
-            appointment.appointment_date,
-            appointment.time_preference,
-            appointment.file_name || null,
-            appointment.file_data || null
-        ],
-        callback
-    );
+    const attachments = appointment.attachments || [];
+
+    db.beginTransaction((transactionErr) => {
+        if (transactionErr) return callback(transactionErr);
+
+        db.query(
+            sql,
+            [
+                appointment.user_id,
+                appointment.appointment_type,
+                appointment.job_specification,
+                appointment.assigned_admin_id,
+                appointment.appointment_date,
+                appointment.time_preference,
+                attachments[0] ? attachments[0].file_name : null,
+                attachments[0] ? attachments[0].file_data : null
+            ],
+            (insertErr, result) => {
+                if (insertErr) {
+                    return db.rollback(() => callback(insertErr));
+                }
+
+                if (attachments.length === 0) {
+                    return db.commit((commitErr) => {
+                        if (commitErr) return db.rollback(() => callback(commitErr));
+                        callback(null, result);
+                    });
+                }
+
+                const attachmentValues = attachments.map((attachment) => [
+                    result.insertId,
+                    attachment.file_name,
+                    attachment.file_data
+                ]);
+                const attachmentSql = `
+                    INSERT INTO appointment_attachments
+                        (appointment_id, file_name, file_data)
+                    VALUES ?
+                `;
+
+                db.query(attachmentSql, [attachmentValues], (attachmentErr) => {
+                    if (attachmentErr) {
+                        return db.rollback(() => callback(attachmentErr));
+                    }
+
+                    db.commit((commitErr) => {
+                        if (commitErr) return db.rollback(() => callback(commitErr));
+                        callback(null, result);
+                    });
+                });
+            }
+        );
+    });
+};
+
+// Adds attachment names to appointment records without returning binary file data.
+const addAttachmentNames = (appointments, callback) => {
+    if (!appointments.length) {
+        return callback(null, appointments);
+    }
+
+    const ids = appointments.map((appointment) => appointment.id);
+    const placeholders = ids.map(() => "?").join(", ");
+    const sql = `
+        SELECT appointment_id, id, file_name
+        FROM appointment_attachments
+        WHERE appointment_id IN (${placeholders})
+        ORDER BY id
+    `;
+
+    db.query(sql, ids, (err, rows) => {
+        if (err) return callback(err);
+
+        const attachmentsByAppointment = new Map();
+        rows.forEach((row) => {
+            if (!attachmentsByAppointment.has(row.appointment_id)) {
+                attachmentsByAppointment.set(row.appointment_id, []);
+            }
+
+            attachmentsByAppointment.get(row.appointment_id).push({
+                id: row.id,
+                file_name: row.file_name
+            });
+        });
+
+        appointments.forEach((appointment) => {
+            appointment.attachments =
+                attachmentsByAppointment.get(appointment.id) || [];
+
+            if (!appointment.attachments.length && appointment.file_name) {
+                appointment.attachments.push({
+                    id: null,
+                    file_name: appointment.file_name
+                });
+            }
+        });
+
+        callback(null, appointments);
+    });
 };
 
 
@@ -144,14 +263,28 @@ const createAppointment = (appointment, callback) => {
 // Queries appointments belonging to one patient.
 const getAppointmentsByUserId = (userId, callback) => {
     const sql = `
-        SELECT a.*, u.fullname AS assigned_admin_name
+        SELECT
+            a.id,
+            a.user_id,
+            a.appointment_type,
+            a.job_specification,
+            a.assigned_admin_id,
+            a.appointment_date,
+            a.time_preference,
+            a.status,
+            a.file_name,
+            a.created_at,
+            u.fullname AS assigned_admin_name
         FROM appointments a
         LEFT JOIN users u ON u.id = a.assigned_admin_id
         WHERE a.user_id = ?
         ORDER BY a.appointment_date DESC, a.created_at DESC
     `;
 
-    db.query(sql, [userId], callback);
+    db.query(sql, [userId], (err, results) => {
+        if (err) return callback(err);
+        addAttachmentNames(results, callback);
+    });
 };
 
 
@@ -180,7 +313,10 @@ const getAllAppointments = (adminId, callback) => {
         ORDER BY a.appointment_date DESC, a.created_at DESC
     `;
 
-    db.query(sql, [adminId], callback);
+    db.query(sql, [adminId], (err, results) => {
+        if (err) return callback(err);
+        addAttachmentNames(results, callback);
+    });
 };
 
 
@@ -199,6 +335,7 @@ const updateAppointmentStatus = (appointmentId, status, adminId, callback) => {
 
 module.exports = {
     addFileColumns,
+    ensureAttachmentTable,
     ensureJobSpecificationColumn,
     getAdminByJobSpecification,
     assignUnassignedAppointmentsByJobSpecification,

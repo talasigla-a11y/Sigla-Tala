@@ -775,6 +775,9 @@ const uploadDropText =
         "uploadDropText"
     );
 
+const defaultUploadDropText =
+    "Click to upload files (PDF, images, DOC/DOCX; up to 5 files)";
+
 const appointmentsList =
     document.getElementById(
         "appointmentsList"
@@ -819,7 +822,7 @@ if (appointmentDate) {
 
 if (appointmentFile) {
 
-    // Shows the selected attachment's filename beside the upload control.
+    // Lists selected filenames and rejects selections above the server limit.
     appointmentFile.addEventListener(
         "change",
         function () {
@@ -828,6 +831,12 @@ if (appointmentFile) {
                 return;
             }
 
+            if (appointmentFile.files && appointmentFile.files.length > 5) {
+                appointmentFile.value = "";
+                uploadDropText.textContent = defaultUploadDropText;
+                showToast("Please select no more than 5 files.", "error");
+                return;
+            }
 
             if (
                 appointmentFile.files &&
@@ -835,12 +844,14 @@ if (appointmentFile) {
             ) {
 
                 uploadDropText.textContent =
-                    appointmentFile.files[0].name;
+                    Array.from(appointmentFile.files)
+                        .map((file) => file.name)
+                        .join(", ");
 
             } else {
 
                 uploadDropText.textContent =
-                    "Click to upload files (PDF, Image)";
+                    defaultUploadDropText;
 
             }
 
@@ -1013,6 +1024,12 @@ function renderAppointments(
                     appointment.status ||
                     "Pending";
 
+                const attachmentNames =
+                    Array.isArray(appointment.attachments)
+                        ? appointment.attachments
+                            .map((attachment) => escapeHTML(attachment.file_name))
+                            .join(", ")
+                        : "";
 
                 return `
 
@@ -1044,6 +1061,7 @@ function renderAppointments(
                             ${escapeHTML(date)}
                             ·
                             ${escapeHTML(time)}
+                            ${attachmentNames ? `<br>Attachments: ${attachmentNames}` : ""}
 
                         </div>
 
@@ -1223,7 +1241,9 @@ if (appointmentForm) {
                 appointmentData.append("appointment_date", appointmentDate.value);
                 appointmentData.append("time_preference", appointmentTime ? appointmentTime.value : "");
                 if (appointmentFile && appointmentFile.files.length) {
-                    appointmentData.append("attachment", appointmentFile.files[0]);
+                    Array.from(appointmentFile.files).forEach((file) => {
+                        appointmentData.append("attachments", file);
+                    });
                 }
 
                 const response =
@@ -1298,7 +1318,7 @@ if (appointmentForm) {
                 if (uploadDropText) {
 
                     uploadDropText.textContent =
-                        "Click to upload files (PDF, Image)";
+                        defaultUploadDropText;
 
                 }
 

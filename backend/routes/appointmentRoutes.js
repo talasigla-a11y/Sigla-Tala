@@ -8,7 +8,7 @@ const multer = require("multer");
 
 const upload = multer({
     storage: multer.memoryStorage(),
-    limits: { fileSize: 10 * 1024 * 1024 },
+    limits: { fileSize: 10 * 1024 * 1024, files: 5 },
     // Restricts uploaded appointment attachments to supported document and image types.
     fileFilter: (req, file, cb) => {
         const allowedTypes = [
@@ -28,12 +28,12 @@ const upload = multer({
     }
 });
 
-// Creates an appointment after authenticating the patient and processing an optional attachment.
+// Creates an appointment after authenticating the patient and processing optional attachments.
 // Create appointment
 router.post(
     "/",
     verifyToken,
-    upload.single("attachment"),
+    upload.array("attachments", 5),
     appointmentController.createAppointment
 );
 

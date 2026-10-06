@@ -22,7 +22,14 @@ const createTable = (callback) => {
 const getPendingAppointments = (callback) => {
     const sql = `
         SELECT a.id AS appointment_id, a.user_id, a.appointment_date,
-               a.time_preference, a.file_name, u.fullname AS patient_name,
+               a.time_preference,
+               COALESCE(
+                   (SELECT GROUP_CONCAT(aa.file_name ORDER BY aa.id SEPARATOR ', ')
+                    FROM appointment_attachments aa
+                    WHERE aa.appointment_id = a.id),
+                   a.file_name
+               ) AS file_name,
+               u.fullname AS patient_name,
                u.email AS patient_email
         FROM appointments a
         JOIN users u ON u.id = a.user_id

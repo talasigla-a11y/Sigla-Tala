@@ -41,6 +41,10 @@ const createAppointment = (req, res) => {
 
         const normalizedTimePreference = time_preference && String(time_preference).trim() ? String(time_preference).trim() : null;
         const job_specification = getJobSpecification(appointment_type);
+        const attachments = (req.files || []).map((file) => ({
+            file_name: file.originalname,
+            file_data: file.buffer
+        }));
 
         const continueBooking = () => {
             appointmentModel.getAdminByJobSpecification(job_specification, (adminErr, admins) => {
@@ -68,8 +72,7 @@ const createAppointment = (req, res) => {
                     assigned_admin_name: assignedAdmin.fullname,
                     appointment_date,
                     time_preference: normalizedTimePreference,
-                    file_name: req.file ? req.file.originalname : null,
-                    file_data: req.file ? req.file.buffer : null
+                    attachments
                 };
 
                 appointmentModel.createAppointment(appointment, (err, result) => {
@@ -87,7 +90,17 @@ const createAppointment = (req, res) => {
                         message: "Appointment created successfully!",
                         appointment: {
                             id: result.insertId,
-                            ...appointment,
+                            user_id: appointment.user_id,
+                            appointment_type: appointment.appointment_type,
+                            job_specification: appointment.job_specification,
+                            assigned_admin_id: appointment.assigned_admin_id,
+                            assigned_admin_name: appointment.assigned_admin_name,
+                            appointment_date: appointment.appointment_date,
+                            time_preference: appointment.time_preference,
+                            attachments: attachments.map((attachment) => ({
+                                id: null,
+                                file_name: attachment.file_name
+                            })),
                             status: "Pending"
                         }
                     });
@@ -117,58 +130,6 @@ const createAppointment = (req, res) => {
             }
 
             continueBooking();
-        });
-
-            appointmentModel.getAdminByJobSpecification(job_specification, (adminErr, admins) => {
-                if (adminErr) {
-                    console.error("FIND APPOINTMENT ADMIN ERROR:", adminErr);
-                    return res.status(500).json({
-                        success: false,
-                        message: "Failed to find a worker for this appointment type."
-                    });
-                }
-
-                if (!admins.length) {
-                    return res.status(409).json({
-                        success: false,
-                        message: `No worker is configured for ${job_specification} appointments. Ask a worker to set their Job Specification.`
-                    });
-                }
-
-                const assignedAdmin = admins[0];
-                const appointment = {
-                    user_id,
-                    appointment_type,
-                    job_specification,
-                    assigned_admin_id: assignedAdmin.id,
-                    assigned_admin_name: assignedAdmin.fullname,
-                    appointment_date,
-                    time_preference,
-                    file_name: req.file ? req.file.originalname : null,
-                    file_data: req.file ? req.file.buffer : null
-                };
-
-                appointmentModel.createAppointment(appointment, (err, result) => {
-                    if (err) {
-                        console.error("CREATE APPOINTMENT ERROR:", err);
-
-                        return res.status(500).json({
-                            success: false,
-                            message: "Failed to create appointment."
-                        });
-                    }
-
-                    return res.status(201).json({
-                        success: true,
-                        message: "Appointment created successfully!",
-                        appointment: {
-                            id: result.insertId,
-                            ...appointment,
-                            status: "Pending"
-                        }
-                    });
-                });
-            });
         });
 
     } catch (error) {
