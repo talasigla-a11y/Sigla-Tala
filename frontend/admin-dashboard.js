@@ -293,6 +293,7 @@ async function loadAppointments() {
         time: apt.time_preference || 'No time selected',
         otherReason: apt.other_reason || '',
         acceptedByName: apt.acceptedByName || '',
+        receiptEmailSent: Boolean(apt.receiptEmailSent),
         status: apt.status || 'Pending',
         user_id: apt.user_id
       }));
@@ -338,7 +339,7 @@ async function updateAppointmentStatusAPI(appointmentId, newStatus) {
 
     if (response.ok) {
       console.log('Appointment status updated:', data);
-      return true;
+      return data;
     } else {
       console.warn('Failed to update appointment status:', data);
       return false;
@@ -638,7 +639,7 @@ function renderDayDetail(dateISO) {
     .map((a) => {
       const actionMarkup =
         a.status === 'Accepted'
-          ? '<span class="status-accepted-tag">Accepted</span>'
+          ? `<span class="status-accepted-tag">Accepted</span>${a.receiptEmailSent ? '' : `<button type="button" class="btn-secondary btn-compact btn-retry-receipt" data-id="${a.id}">Retry receipt email</button>`}`
           : a.status === 'Rejected'
             ? '<span class="status-rejected-tag">Rejected</span>'
             : `
@@ -668,12 +669,33 @@ function renderDayDetail(dateISO) {
     btn.addEventListener('click', async () => {
       const appt = appointments.find((a) => a.id === Number(btn.dataset.id));
       if (appt) {
-        const success = await updateAppointmentStatusAPI(appt.id, 'Accepted');
-        if (success) {
-          showToast('Appointment accepted.', 'success');
+        const result = await updateAppointmentStatusAPI(appt.id, 'Accepted');
+        if (result) {
+          appt.status = 'Accepted';
+          appt.acceptedByName = result.acceptedByName || currentUser.name;
+          appt.receiptEmailSent = Boolean(result.receiptEmailSent);
+          showToast(result.message || 'Appointment accepted.', result.receiptEmailSent ? 'success' : 'warning');
+          renderCalendar();
         } else {
           showToast('Failed to accept appointment.', 'error');
         }
+      }
+    });
+  });
+
+  calendarDayList.querySelectorAll('.btn-retry-receipt').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const appt = appointments.find((a) => a.id === Number(btn.dataset.id));
+      if (!appt) return;
+
+      const result = await updateAppointmentStatusAPI(appt.id, 'Accepted');
+      if (result) {
+        appt.acceptedByName = result.acceptedByName || currentUser.name;
+        appt.receiptEmailSent = Boolean(result.receiptEmailSent);
+        showToast(result.message || 'Receipt email retry completed.', result.receiptEmailSent ? 'success' : 'warning');
+        renderCalendar();
+      } else {
+        showToast('Failed to retry the receipt email.', 'error');
       }
     });
   });
@@ -683,9 +705,12 @@ function renderDayDetail(dateISO) {
     btn.addEventListener('click', async () => {
       const appt = appointments.find((a) => a.id === Number(btn.dataset.id));
       if (appt) {
-        const success = await updateAppointmentStatusAPI(appt.id, 'Rejected');
-        if (success) {
-          showToast('Appointment rejected.', 'error');
+        const result = await updateAppointmentStatusAPI(appt.id, 'Rejected');
+        if (result) {
+          appt.status = 'Rejected';
+          appt.receiptEmailSent = false;
+          showToast(result.message || 'Appointment rejected.', 'error');
+          renderCalendar();
         } else {
           showToast('Failed to reject appointment.', 'error');
         }

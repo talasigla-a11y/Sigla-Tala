@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Verify Appointment Receipt — Sigla Tala</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="receipt-page">
+  <main class="receipt-card" aria-live="polite">
+    <div class="receipt-brand">Sigla Tala</div>
+    <div id="receiptLoading" class="receipt-message">Verifying your private receipt link...</div>
+    <section id="receiptVerified" class="hidden">
+      <div class="receipt-verified-badge">Verified appointment</div>
+      <h1>Appointment Receipt</h1>
+      <p class="receipt-intro">This appointment matches the accepted record in Sigla Tala.</p>
+      <dl class="receipt-details">
+        <div><dt>Receipt number</dt><dd id="receiptNumber"></dd></div>
+        <div><dt>Patient</dt><dd id="receiptPatient"></dd></div>
+        <div><dt>Appointment type</dt><dd id="receiptType"></dd></div>
+        <div><dt>Date</dt><dd id="receiptDate"></dd></div>
+        <div><dt>Time</dt><dd id="receiptTime"></dd></div>
+        <div><dt>Reason/details</dt><dd id="receiptReason"></dd></div>
+        <div><dt>Responsible worker</dt><dd id="receiptWorker"></dd></div>
+        <div><dt>Status</dt><dd id="receiptStatus"></dd></div>
+      </dl>
+      <p class="receipt-private-note">This receipt was verified using its private link. Do not share that link with others.</p>
+    </section>
+    <section id="receiptError" class="hidden" role="alert">
+      <h1>Receipt could not be verified</h1>
+      <p id="receiptErrorMessage"></p>
+      <p>If you believe this is an error, sign in to Sigla Tala or contact your health center.</p>
+    </section>
+  </main>
+  <script src="appointment-receipt.js"></script>
+</body>
+</html>

@@ -1,4 +1,6 @@
 const appointmentModel = require("../models/appointmentModel");
+const crypto = require("crypto");
+const sendEmail = require("../utils/gmailSender");
 
 const jobSpecificationByAppointmentType = {
     "general consultation": "General Practitioner",
@@ -14,6 +16,76 @@ const jobSpecificationByAppointmentType = {
 // Resolves an appointment type to the specialty of its responsible admin.
 const getJobSpecification = (appointmentType) =>
     jobSpecificationByAppointmentType[String(appointmentType).trim().toLowerCase()] || "Health Care workers";
+
+const escapeHtml = (value) =>
+    String(value || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+
+const formatReceiptDate = (value) => {
+    if (!value) return "Not provided";
+    if (value instanceof Date) return value.toISOString().slice(0, 10);
+    return String(value).slice(0, 10);
+};
+
+const createReceiptUrl = (appointmentId, token) => {
+    const frontendBaseUrl = process.env.FRONTEND_URL || "https://siglatala.com";
+    const baseUrl = new URL(frontendBaseUrl);
+
+    if (
+        baseUrl.protocol !== "https:" &&
+        !(baseUrl.protocol === "http:" && ["localhost", "127.0.0.1"].includes(baseUrl.hostname))
+    ) {
+        throw new Error("FRONTEND_URL must use HTTPS, except for localhost development.");
+    }
+
+    const receiptUrl = new URL("/appointment-receipt.html", baseUrl);
+    receiptUrl.hash = new URLSearchParams({
+        appointment_id: String(appointmentId),
+        token
+    }).toString();
+    return receiptUrl.toString();
+};
+
+const createReceiptEmailHtml = (receipt, receiptUrl) => {
+    const patientName = escapeHtml(receipt.patient_name);
+    const appointmentType = escapeHtml(receipt.appointment_type);
+    const appointmentDate = escapeHtml(formatReceiptDate(receipt.appointment_date));
+    const appointmentTime = escapeHtml(receipt.time_preference || "Not provided");
+    const appointmentReason = escapeHtml(receipt.other_reason || "Not applicable");
+    const workerName = escapeHtml(receipt.accepted_by_name);
+    const specialty = escapeHtml(receipt.job_specification);
+    const safeReceiptUrl = escapeHtml(receiptUrl);
+
+    return `
+        <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;color:#1a1f2b;line-height:1.6">
+          <div style="background:#1e8e5a;color:#fff;padding:20px 24px;border-radius:12px 12px 0 0">
+            <h1 style="margin:0;font-size:22px">Sigla Tala Appointment Receipt</h1>
+          </div>
+          <div style="border:1px solid #d9dde3;border-top:0;padding:24px;border-radius:0 0 12px 12px">
+            <p>Hello ${patientName},</p>
+            <p>Your appointment has been accepted by the health center.</p>
+            <table style="width:100%;border-collapse:collapse">
+              <tr><td style="padding:8px 0"><strong>Receipt number</strong></td><td>ST-${Number(receipt.id).toString().padStart(8, "0")}</td></tr>
+              <tr><td style="padding:8px 0"><strong>Appointment</strong></td><td>${appointmentType}</td></tr>
+              <tr><td style="padding:8px 0"><strong>Date</strong></td><td>${appointmentDate}</td></tr>
+              <tr><td style="padding:8px 0"><strong>Time</strong></td><td>${appointmentTime}</td></tr>
+              <tr><td style="padding:8px 0"><strong>Reason/details</strong></td><td>${appointmentReason}</td></tr>
+              <tr><td style="padding:8px 0"><strong>Responsible worker</strong></td><td>${workerName} (${specialty})</td></tr>
+              <tr><td style="padding:8px 0"><strong>Status</strong></td><td>Accepted</td></tr>
+            </table>
+            <p style="margin:24px 0">
+              <a href="${safeReceiptUrl}" style="display:inline-block;background:#1e8e5a;color:#fff;text-decoration:none;padding:12px 18px;border-radius:8px;font-weight:bold">Verify your appointment receipt</a>
+            </p>
+            <p>This private link verifies this receipt against the appointment recorded in Sigla Tala. Keep it private and use the button to view the verified appointment details.</p>
+            <p>If you did not request this appointment, contact your health center.</p>
+          </div>
+        </div>
+    `;
+};
 
 // Looks up the worker who would be assigned to the selected appointment type.
 const getProviderForAppointmentType = (req, res) => {
@@ -224,6 +296,54 @@ const getMyAppointments = (req, res) => {
     }
 };
 
+// Verifies a private emailed receipt link without exposing appointments by ID alone.
+const verifyAppointmentReceipt = (req, res) => {
+    res.set("Cache-Control", "no-store");
+
+    const appointmentId = Number(req.body.appointmentId);
+    const token = String(req.body.token || "");
+
+    if (!Number.isSafeInteger(appointmentId) || appointmentId < 1 || !/^[a-f0-9]{64}$/i.test(token)) {
+        return res.status(400).json({
+            success: false,
+            message: "This receipt link is invalid."
+        });
+    }
+
+    const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
+    appointmentModel.getAppointmentReceiptByToken(appointmentId, tokenHash, (err, receipt) => {
+        if (err) {
+            console.error("VERIFY APPOINTMENT RECEIPT ERROR:", err);
+            return res.status(500).json({
+                success: false,
+                message: "Unable to verify this appointment receipt."
+            });
+        }
+
+        if (!receipt) {
+            return res.status(404).json({
+                success: false,
+                message: "This receipt link is invalid or no longer active."
+            });
+        }
+
+        return res.status(200).json({
+            success: true,
+            receipt: {
+                appointment_id: receipt.id,
+                patient_name: receipt.patient_name,
+                appointment_type: receipt.appointment_type,
+                appointment_date: formatReceiptDate(receipt.appointment_date),
+                time_preference: receipt.time_preference,
+                other_reason: receipt.other_reason,
+                job_specification: receipt.job_specification,
+                accepted_by_name: receipt.accepted_by_name,
+                status: receipt.status
+            }
+        });
+    });
+};
+
 
 // ================= GET ALL APPOINTMENTS (ADMIN) =================
 // Loads appointments assigned to the authenticated administrator.
@@ -276,6 +396,82 @@ const updateAppointmentStatus = (req, res) => {
             });
         }
 
+        if (status === "Accepted") {
+            const id = Number(appointmentId);
+            if (!Number.isSafeInteger(id) || id < 1) {
+                return res.status(400).json({
+                    success: false,
+                    message: "A valid appointment is required."
+                });
+            }
+
+            const receiptToken = crypto.randomBytes(32).toString("hex");
+            const receiptTokenHash = crypto.createHash("sha256").update(receiptToken).digest("hex");
+
+            return appointmentModel.prepareAcceptedAppointmentReceipt(
+                id,
+                req.user.id,
+                receiptTokenHash,
+                async (acceptErr, receipt) => {
+                    if (acceptErr) {
+                        console.error("ACCEPT APPOINTMENT ERROR:", acceptErr);
+                        return res.status(500).json({
+                            success: false,
+                            message: "Failed to accept appointment."
+                        });
+                    }
+
+                    if (!receipt) {
+                        return res.status(409).json({
+                            success: false,
+                            message: "This appointment is no longer pending or its receipt was already sent."
+                        });
+                    }
+
+                    if (!receipt.patient_email) {
+                        return res.status(200).json({
+                            success: true,
+                            receiptEmailSent: false,
+                            acceptedByName: receipt.accepted_by_name,
+                            message: "Appointment accepted, but the patient's account has no email address for the receipt."
+                        });
+                    }
+
+                    try {
+                        const receiptUrl = createReceiptUrl(id, receiptToken);
+                        await sendEmail({
+                            to: receipt.patient_email,
+                            subject: `Sigla Tala appointment accepted — ST-${id.toString().padStart(8, "0")}`,
+                            html: createReceiptEmailHtml(receipt, receiptUrl)
+                        });
+
+                        appointmentModel.markReceiptEmailSent(id, receiptTokenHash, (markErr) => {
+                            if (markErr) {
+                                console.error("MARK APPOINTMENT RECEIPT SENT ERROR:", markErr);
+                            }
+
+                            return res.status(200).json({
+                                success: true,
+                                receiptEmailSent: true,
+                                acceptedByName: receipt.accepted_by_name,
+                                message: markErr
+                                    ? `Appointment accepted and the receipt was emailed to ${receipt.patient_email}, but the delivery record could not be saved.`
+                                    : `Appointment accepted. A verified receipt was emailed to ${receipt.patient_email}.`
+                            });
+                        });
+                    } catch (emailErr) {
+                        console.error("APPOINTMENT RECEIPT EMAIL ERROR:", emailErr);
+                        return res.status(200).json({
+                            success: true,
+                            receiptEmailSent: false,
+                            acceptedByName: receipt.accepted_by_name,
+                            message: "Appointment accepted, but the receipt email could not be sent. Check email configuration and retry."
+                        });
+                    }
+                }
+            );
+        }
+
         appointmentModel.updateAppointmentStatus(
             appointmentId,
             status,
@@ -317,6 +513,7 @@ const updateAppointmentStatus = (req, res) => {
 
 module.exports = {
     getProviderForAppointmentType,
+    verifyAppointmentReceipt,
     createAppointment,
     getMyAppointments,
     getAllAppointments,

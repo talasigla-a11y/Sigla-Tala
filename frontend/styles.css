@@ -1550,6 +1550,83 @@ button {
   margin: -2px 0 0;
 }
 
+.receipt-page {
+  min-height: 100vh;
+  padding: 32px 16px;
+  display: grid;
+  place-items: center;
+}
+
+.receipt-card {
+  width: min(620px, 100%);
+  padding: 30px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: var(--shadow);
+}
+
+.receipt-brand {
+  margin-bottom: 24px;
+  color: var(--green);
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.receipt-card h1 {
+  margin: 12px 0 6px;
+  font-size: 25px;
+}
+
+.receipt-intro,
+.receipt-private-note,
+.receipt-message,
+#receiptError p {
+  color: var(--text-muted);
+  line-height: 1.55;
+}
+
+.receipt-verified-badge {
+  display: inline-block;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: #e7f5ec;
+  color: var(--green-dark);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.receipt-details {
+  margin: 24px 0;
+}
+
+.receipt-details > div {
+  display: grid;
+  grid-template-columns: minmax(130px, 0.8fr) 1.2fr;
+  gap: 16px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.receipt-details dt {
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.receipt-details dd {
+  margin: 0;
+  color: var(--text-dark);
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.receipt-private-note {
+  padding: 12px;
+  border-radius: 8px;
+  background: #f4f5f7;
+  font-size: 13px;
+}
+
 .field-trio {
   display: flex;
 

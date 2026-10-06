@@ -28,6 +28,12 @@ const upload = multer({
     }
 });
 
+// Validates the private token from an emailed appointment receipt.
+router.post(
+    "/receipt/verify",
+    appointmentController.verifyAppointmentReceipt
+);
+
 // Creates an appointment after authenticating the patient and processing optional attachments.
 // Create appointment
 router.post(

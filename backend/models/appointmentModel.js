@@ -18,19 +18,33 @@ const ensureOtherReasonColumn = (callback) => {
 
 // Stores which worker accepted an appointment, separately from its initial assignment.
 const ensureAcceptedByWorkerColumn = (callback) => {
-    db.query("ALTER TABLE appointments ADD COLUMN accepted_by_worker_id INT NULL", (err) => {
-        if (err && err.code !== "ER_DUP_FIELDNAME") return callback(err);
+    const addColumns = [
+        "ALTER TABLE appointments ADD COLUMN accepted_by_worker_id INT NULL",
+        "ALTER TABLE appointments ADD COLUMN receipt_token_hash CHAR(64) NULL",
+        "ALTER TABLE appointments ADD COLUMN receipt_email_sent_at DATETIME NULL"
+    ];
 
-        const backfillSql = `
-            UPDATE appointments
-            SET accepted_by_worker_id = assigned_admin_id
-            WHERE status = 'Accepted'
-              AND accepted_by_worker_id IS NULL
-              AND assigned_admin_id IS NOT NULL
-        `;
+    const addNextColumn = (index) => {
+        if (index === addColumns.length) {
+            const backfillSql = `
+                UPDATE appointments
+                SET accepted_by_worker_id = assigned_admin_id
+                WHERE status = 'Accepted'
+                  AND accepted_by_worker_id IS NULL
+                  AND assigned_admin_id IS NOT NULL
+            `;
 
-        db.query(backfillSql, callback);
-    });
+            db.query(backfillSql, callback);
+            return;
+        }
+
+        db.query(addColumns[index], (err) => {
+            if (err && err.code !== "ER_DUP_FIELDNAME") return callback(err);
+            addNextColumn(index + 1);
+        });
+    };
+
+    addNextColumn(0);
 };
 
 // Creates a separate attachment row for each uploaded appointment file.
@@ -300,6 +314,7 @@ const getAppointmentsByUserId = (userId, callback) => {
             a.time_preference,
             a.other_reason,
             accepted_by.fullname AS accepted_by_name,
+            a.receipt_email_sent_at,
             a.status,
             a.file_name,
             a.created_at,
@@ -332,6 +347,8 @@ const getAllAppointments = (adminId, callback) => {
             a.time_preference,
             a.other_reason,
             accepted_by.fullname AS acceptedByName,
+            a.receipt_email_sent_at AS receiptEmailSentAt,
+            (a.receipt_email_sent_at IS NOT NULL) AS receiptEmailSent,
             a.status,
             a.file_name,
             a.created_at,
@@ -352,6 +369,97 @@ const getAllAppointments = (adminId, callback) => {
     });
 };
 
+// Marks an appointment accepted and returns the private data required to email its receipt.
+const prepareAcceptedAppointmentReceipt = (appointmentId, workerId, tokenHash, callback) => {
+    const updateSql = `
+        UPDATE appointments
+        SET status = 'Accepted',
+            accepted_by_worker_id = ?,
+            receipt_token_hash = ?,
+            receipt_email_sent_at = NULL
+        WHERE id = ?
+          AND assigned_admin_id = ?
+          AND (
+              status = 'Pending'
+              OR (
+                  status = 'Accepted'
+                  AND accepted_by_worker_id = ?
+                  AND receipt_email_sent_at IS NULL
+              )
+          )
+    `;
+
+    db.query(updateSql, [workerId, tokenHash, appointmentId, workerId, workerId], (updateErr, result) => {
+        if (updateErr) return callback(updateErr);
+        if (!result.affectedRows) return callback(null, null);
+
+        const receiptSql = `
+            SELECT
+                a.id,
+                a.appointment_type,
+                a.appointment_date,
+                a.time_preference,
+                a.other_reason,
+                a.job_specification,
+                a.receipt_token_hash,
+                patient.fullname AS patient_name,
+                patient.email AS patient_email,
+                worker.fullname AS accepted_by_name
+            FROM appointments a
+            JOIN users patient ON patient.id = a.user_id
+            JOIN users worker ON worker.id = a.accepted_by_worker_id
+            WHERE a.id = ?
+              AND a.status = 'Accepted'
+              AND a.accepted_by_worker_id = ?
+        `;
+
+        db.query(receiptSql, [appointmentId, workerId], (receiptErr, rows) => {
+            if (receiptErr) return callback(receiptErr);
+            callback(null, rows[0] || null);
+        });
+    });
+};
+
+// Verifies an emailed receipt token and returns only its matching accepted appointment.
+const getAppointmentReceiptByToken = (appointmentId, tokenHash, callback) => {
+    const sql = `
+        SELECT
+            a.id,
+            a.appointment_type,
+            a.appointment_date,
+            a.time_preference,
+            a.other_reason,
+            a.job_specification,
+            a.status,
+            patient.fullname AS patient_name,
+            worker.fullname AS accepted_by_name
+        FROM appointments a
+        JOIN users patient ON patient.id = a.user_id
+        LEFT JOIN users worker ON worker.id = a.accepted_by_worker_id
+        WHERE a.id = ?
+          AND a.status = 'Accepted'
+          AND a.receipt_token_hash = ?
+    `;
+
+    db.query(sql, [appointmentId, tokenHash], (err, rows) => {
+        if (err) return callback(err);
+        callback(null, rows[0] || null);
+    });
+};
+
+// Marks delivery only for the currently issued appointment receipt token.
+const markReceiptEmailSent = (appointmentId, tokenHash, callback) => {
+    const sql = `
+        UPDATE appointments
+        SET receipt_email_sent_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+          AND status = 'Accepted'
+          AND receipt_token_hash = ?
+    `;
+
+    db.query(sql, [appointmentId, tokenHash], callback);
+};
+
 
 // ================= UPDATE APPOINTMENT STATUS =================
 // Persists the admin's status decision for an appointment.
@@ -359,11 +467,17 @@ const updateAppointmentStatus = (appointmentId, status, adminId, callback) => {
     const sql = `
         UPDATE appointments
         SET status = ?,
-            accepted_by_worker_id = CASE WHEN ? = 'Accepted' THEN ? ELSE NULL END
+            accepted_by_worker_id = CASE WHEN ? = 'Accepted' THEN ? ELSE NULL END,
+            receipt_token_hash = CASE WHEN ? = 'Accepted' THEN receipt_token_hash ELSE NULL END,
+            receipt_email_sent_at = CASE WHEN ? = 'Accepted' THEN receipt_email_sent_at ELSE NULL END
         WHERE id = ? AND assigned_admin_id = ?
     `;
 
-    db.query(sql, [status, status, adminId, appointmentId, adminId], callback);
+    db.query(
+        sql,
+        [status, status, adminId, status, status, appointmentId, adminId],
+        callback
+    );
 };
 
 
@@ -379,5 +493,8 @@ module.exports = {
     createAppointment,
     getAppointmentsByUserId,
     getAllAppointments,
+    prepareAcceptedAppointmentReceipt,
+    getAppointmentReceiptByToken,
+    markReceiptEmailSent,
     updateAppointmentStatus
 };
