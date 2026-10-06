@@ -18,6 +18,40 @@ const createTable = (callback) => {
     db.query(sql, callback);
 };
 
+const addReportAttachments = (records, workerId, callback) => {
+    if (!records.length) return callback(null, records);
+
+    const ids = records.map((record) => record.appointment_id);
+    const placeholders = ids.map(() => "?").join(", ");
+    const sql = `
+        SELECT aa.id, aa.appointment_id, aa.file_name
+        FROM appointment_attachments aa
+        JOIN appointments a ON a.id = aa.appointment_id
+        WHERE a.assigned_admin_id = ?
+          AND aa.appointment_id IN (${placeholders})
+        ORDER BY aa.id
+    `;
+
+    db.query(sql, [workerId, ...ids], (err, attachments) => {
+        if (err) return callback(err);
+        const byAppointment = new Map();
+        attachments.forEach((attachment) => {
+            if (!byAppointment.has(attachment.appointment_id)) byAppointment.set(attachment.appointment_id, []);
+            byAppointment.get(attachment.appointment_id).push({
+                id: attachment.id,
+                file_name: attachment.file_name
+            });
+        });
+        records.forEach((record) => {
+            record.attachments = byAppointment.get(record.appointment_id) || [];
+            if (!record.attachments.length && record.file_name) {
+                record.attachments.push({ id: "legacy", file_name: record.file_name });
+            }
+        });
+        callback(null, records);
+    });
+};
+
 // Finds completed appointments that do not yet have a medical report.
 const getPendingAppointments = (workerId, callback) => {
     const sql = `
@@ -39,20 +73,76 @@ const getPendingAppointments = (workerId, callback) => {
           AND r.id IS NULL
         ORDER BY a.appointment_date DESC, a.created_at DESC
     `;
-    db.query(sql, [workerId], callback);
+    db.query(sql, [workerId], (err, appointments) => {
+        if (err) return callback(err);
+        addReportAttachments(appointments, workerId, callback);
+    });
 };
 
 // Retrieves reports together with the related patient and appointment data.
 const getAllReports = (workerId, callback) => {
     const sql = `
-        SELECT r.*, u.fullname AS patient_name
+        SELECT r.*, a.id AS appointment_id, a.file_name, u.fullname AS patient_name
         FROM medical_reports r
         JOIN users u ON u.id = r.user_id
         JOIN appointments a ON a.id = r.appointment_id
         WHERE a.assigned_admin_id = ?
         ORDER BY r.created_at DESC
     `;
-    db.query(sql, [workerId], callback);
+    db.query(sql, [workerId], (err, reports) => {
+        if (err) return callback(err);
+        addReportAttachments(reports, workerId, callback);
+    });
+};
+
+// Loads an uploaded file only when its appointment belongs to the requesting worker.
+const getAppointmentAttachment = (appointmentId, attachmentId, workerId, callback) => {
+    if (attachmentId === "legacy") {
+        const legacySql = `
+            SELECT a.file_name, a.file_data
+            FROM appointments a
+            WHERE a.id = ?
+              AND a.assigned_admin_id = ?
+              AND a.file_name IS NOT NULL
+              AND a.file_data IS NOT NULL
+            LIMIT 1
+        `;
+        return db.query(legacySql, [appointmentId, workerId], (err, rows) => {
+            if (err) return callback(err);
+            callback(null, rows[0] || null);
+        });
+    }
+
+    const sql = `
+        SELECT aa.file_name, aa.file_data
+        FROM appointment_attachments aa
+        JOIN appointments a ON a.id = aa.appointment_id
+        WHERE aa.appointment_id = ?
+          AND aa.id = ?
+          AND a.assigned_admin_id = ?
+        LIMIT 1
+    `;
+    db.query(sql, [appointmentId, attachmentId, workerId], (err, rows) => {
+        if (err) return callback(err);
+        callback(null, rows[0] || null);
+    });
+};
+
+// Loads a saved report and patient email for a worker-authorized resend.
+const getReportForWorker = (reportId, workerId, callback) => {
+    const sql = `
+        SELECT r.*, u.fullname AS patient_name, u.email AS patient_email
+        FROM medical_reports r
+        JOIN users u ON u.id = r.user_id
+        JOIN appointments a ON a.id = r.appointment_id
+        WHERE r.id = ?
+          AND a.assigned_admin_id = ?
+        LIMIT 1
+    `;
+    db.query(sql, [reportId, workerId], (err, rows) => {
+        if (err) return callback(err);
+        callback(null, rows[0] || null);
+    });
 };
 
 // Saves a report and its optional accepted follow-up as one atomic operation.
@@ -177,4 +267,11 @@ const createReport = (report, worker, followUp, tokenHash, callback) => {
     });
 };
 
-module.exports = { createTable, getPendingAppointments, getAllReports, createReport };
+module.exports = {
+    createTable,
+    getPendingAppointments,
+    getAllReports,
+    getAppointmentAttachment,
+    getReportForWorker,
+    createReport
+};

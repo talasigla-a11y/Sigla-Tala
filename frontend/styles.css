@@ -1213,6 +1213,18 @@ button {
   color: var(--text-dark);
 }
 
+.report-attachment-link {
+  color: var(--green);
+  font-weight: 600;
+  text-decoration: underline;
+  overflow-wrap: anywhere;
+}
+
+.report-files {
+  margin-top: 10px;
+  font-size: 13px;
+}
+
 .day-patient-time {
   font-size: 13px;
   color: var(--text-muted);

@@ -791,10 +791,36 @@ const medicalReportsList = document.getElementById('medicalReportsList');
 const pendingReportsCount = document.getElementById('pendingReportsCount');
 const medicalReportFormPanel = document.getElementById('medicalReportFormPanel');
 const medicalReportForm = document.getElementById('medicalReportForm');
+const reportSearch = document.getElementById('reportSearch');
+let medicalReportEntries = [];
 
 // Escapes report text before inserting it into HTML to prevent markup injection.
 function escapeReportHTML(value) {
   return String(value || '').replace(/[&<>"']/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[character]));
+}
+
+// Filters encoded reports by patient name and report details as the worker types.
+function renderMedicalReports() {
+  const query = reportSearch.value.trim().toLocaleLowerCase();
+  const reports = medicalReportEntries.filter((report) => [
+    report.patient_name,
+    report.diagnostic,
+    report.notes,
+    report.recorded_date,
+    report.doctor_name,
+  ].some((value) => String(value || '').toLocaleLowerCase().includes(query)));
+
+  medicalReportsList.innerHTML = reports.length ? reports.map((report) => `
+    <article class="announcement-card">
+      <div class="announcement-date">${escapeReportHTML(report.recorded_date)}</div>
+      <h3>${escapeReportHTML(report.patient_name)}</h3>
+      <p><strong>${escapeReportHTML(report.diagnostic)}</strong><br>${escapeReportHTML(report.notes)}</p>
+      ${report.attachments && report.attachments.length
+        ? `<p class="report-files">${report.attachments.map((file) => `<a href="#" class="report-attachment-link" data-appointment-id="${report.appointment_id}" data-attachment-id="${escapeReportHTML(file.id)}">${escapeReportHTML(file.file_name)} · View file</a>`).join('<br>')}</p>`
+        : ''}
+      <button type="button" class="btn-secondary btn-compact resend-report-email-btn" data-report-id="${report.id}">Resend report email</button>
+    </article>
+  `).join('') : `<p class="empty-state">${medicalReportEntries.length ? 'No reports match your search.' : 'No medical reports encoded yet.'}</p>`;
 }
 
 // Retrieves pending and completed medical reports for the signed-in worker.
@@ -818,21 +844,78 @@ async function loadMedicalReports() {
       <div class="day-patient-item">
         <div class="day-patient-main">
           <div class="day-patient-name">${escapeReportHTML(item.patient_name)}</div>
-          <div class="day-patient-type">${escapeReportHTML(item.file_name || 'No file attached')}</div>
+          <div class="day-patient-type">${item.attachments && item.attachments.length
+            ? item.attachments.map((file) => `<a href="#" class="report-attachment-link" data-appointment-id="${item.appointment_id}" data-attachment-id="${escapeReportHTML(file.id)}">${escapeReportHTML(file.file_name)} · View file</a>`).join('<br>')
+            : 'No file attached'}</div>
           <div class="day-patient-time">${escapeReportHTML(item.appointment_date)} - ${escapeReportHTML(item.time_preference)}</div>
         </div>
         <button type="button" class="btn-primary create-report-btn" data-appointment-id="${item.appointment_id}" data-user-id="${item.user_id}" data-patient="${escapeReportHTML(item.patient_name)}" data-files="${escapeReportHTML(item.file_name || 'No file attached')}">Create Report</button>
       </div>`).join('') : '<p class="empty-state">No pending reports to encode.</p>';
 
-    medicalReportsList.innerHTML = reports.length ? reports.map((report) => `
-      <article class="announcement-card"><div class="announcement-date">${escapeReportHTML(report.recorded_date)}</div><h3>${escapeReportHTML(report.patient_name)}</h3><p><strong>${escapeReportHTML(report.diagnostic)}</strong><br>${escapeReportHTML(report.notes)}</p></article>
-    `).join('') : '<p class="empty-state">No medical reports encoded yet.</p>';
+    medicalReportEntries = reports;
+    renderMedicalReports();
 
     // Loads the selected appointment into the medical report editor.
     pendingReportsList.querySelectorAll('.create-report-btn').forEach((button) => button.addEventListener('click', () => openMedicalReportForm(button.dataset)));
   } catch (error) {
     console.error('MEDICAL REPORT LOAD ERROR:', error);
     showToast('Failed to load medical reports.', 'error');
+  }
+}
+
+// Opens an attachment through the authenticated API without exposing database file URLs.
+async function openReportAttachment(event) {
+  const link = event.target.closest('.report-attachment-link');
+  if (!link) return;
+  event.preventDefault();
+
+  const previewWindow = window.open('about:blank', '_blank');
+  try {
+    const response = await fetch(
+      `${API_BASE_URL}/api/medical-reports/appointments/${encodeURIComponent(link.dataset.appointmentId)}/attachments/${encodeURIComponent(link.dataset.attachmentId)}`,
+      { headers: { Authorization: `Bearer ${localStorage.getItem('token') || ''}` } }
+    );
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}));
+      throw new Error(data.message || 'Unable to open the uploaded file.');
+    }
+    const fileUrl = URL.createObjectURL(await response.blob());
+    if (previewWindow) {
+      previewWindow.location = fileUrl;
+      previewWindow.addEventListener('beforeunload', () => URL.revokeObjectURL(fileUrl), { once: true });
+    } else {
+      const download = document.createElement('a');
+      download.href = fileUrl;
+      download.target = '_blank';
+      download.rel = 'noopener';
+      download.click();
+      setTimeout(() => URL.revokeObjectURL(fileUrl), 60000);
+    }
+  } catch (error) {
+    if (previewWindow) previewWindow.close();
+    console.error('MEDICAL REPORT ATTACHMENT ERROR:', error);
+    showToast(error.message, 'error');
+  }
+}
+
+// Retries delivery of a previously saved medical report to the patient's registered email.
+async function resendMedicalReportEmail(event) {
+  const button = event.target.closest('.resend-report-email-btn');
+  if (!button) return;
+  button.disabled = true;
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/medical-reports/${encodeURIComponent(button.dataset.reportId)}/resend`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${localStorage.getItem('token') || ''}` },
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.message || 'Unable to resend the report email.');
+    showToast(data.message || 'Medical report email sent.', 'success');
+  } catch (error) {
+    console.error('RESEND MEDICAL REPORT ERROR:', error);
+    showToast(error.message, 'error');
+  } finally {
+    button.disabled = false;
   }
 }
 
@@ -887,7 +970,12 @@ async function saveMedicalReport(event) {
     document.getElementById('reportFollowUpTime').required = false;
     medicalReportFormPanel.classList.add('hidden');
     const emailFailed = data.emailSent === false || data.receiptEmailSent === false;
-    showToast(data.message || (emailFailed ? 'Report saved, but an email failed.' : 'Report saved and emailed to the patient.'), emailFailed ? 'error' : 'success');
+    const message = data.message || [
+      emailFailed ? 'Report saved, but an email failed.' : 'Report saved and emailed to the patient.',
+      data.emailError,
+      data.receiptEmailError,
+    ].filter(Boolean).join(' ');
+    showToast(message, emailFailed ? 'error' : 'success');
     loadMedicalReports();
   } catch (error) {
     console.error('MEDICAL REPORT SAVE ERROR:', error);
@@ -908,6 +996,10 @@ document.getElementById('reportFollowUp').addEventListener('change', (event) => 
   document.getElementById('reportFollowUpDate').required = enabled;
   document.getElementById('reportFollowUpTime').required = enabled;
 });
+reportSearch.addEventListener('input', renderMedicalReports);
+pendingReportsList.addEventListener('click', openReportAttachment);
+medicalReportsList.addEventListener('click', openReportAttachment);
+medicalReportsList.addEventListener('click', resendMedicalReportEmail);
  
 // Switches between the pending appointments and completed report lists.
 tabButtons.forEach((btn) => {

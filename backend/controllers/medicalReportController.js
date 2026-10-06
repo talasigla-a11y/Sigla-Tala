@@ -21,6 +21,48 @@ const getReports = (req, res) => {
     });
 };
 
+const getAttachment = (req, res) => {
+    const appointmentId = Number(req.params.appointmentId);
+    const attachmentId = req.params.attachmentId === "legacy"
+        ? "legacy"
+        : Number(req.params.attachmentId);
+    if (!Number.isSafeInteger(appointmentId) || appointmentId < 1 ||
+        (attachmentId !== "legacy" && (!Number.isSafeInteger(attachmentId) || attachmentId < 1))) {
+        return res.status(400).json({ success: false, message: "A valid appointment and attachment are required." });
+    }
+
+    medicalReportModel.getAppointmentAttachment(appointmentId, attachmentId, req.user.id, (err, attachment) => {
+        if (err) {
+            console.error("GET MEDICAL REPORT ATTACHMENT ERROR:", err);
+            return res.status(500).json({ success: false, message: "Unable to load the appointment attachment." });
+        }
+        if (!attachment) {
+            return res.status(404).json({ success: false, message: "Attachment not found for an appointment assigned to this worker." });
+        }
+
+        const extension = String(attachment.file_name).split(".").pop().toLowerCase();
+        const contentTypes = {
+            pdf: "application/pdf",
+            jpg: "image/jpeg",
+            jpeg: "image/jpeg",
+            png: "image/png",
+            webp: "image/webp",
+            doc: "application/msword",
+            docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        };
+        const contentType = contentTypes[extension] || "application/octet-stream";
+        const safeFileName = attachment.file_name.replace(/["\\\r\n]/g, "_");
+        const disposition = ["pdf", "jpg", "jpeg", "png", "webp"].includes(extension)
+            ? "inline"
+            : "attachment";
+
+        res.setHeader("Content-Type", contentType);
+        res.setHeader("Content-Disposition", `${disposition}; filename="${safeFileName}"`);
+        res.setHeader("X-Content-Type-Options", "nosniff");
+        return res.status(200).send(attachment.file_data);
+    });
+};
+
 const getProfile = (userId) => new Promise((resolve, reject) => {
     userModel.getProfileById(userId, (err, users) => {
         if (err) return reject(err);
@@ -118,6 +160,7 @@ const createReport = async (req, res) => {
             }
 
             let emailSent = false;
+            let emailErrorMessage = null;
             try {
                 const patient = await getProfile(userId);
                 if (!patient.email) throw new Error("The patient account has no email address.");
@@ -125,10 +168,12 @@ const createReport = async (req, res) => {
                 emailSent = true;
             } catch (emailError) {
                 console.error("MEDICAL REPORT EMAIL ERROR:", emailError);
+                emailErrorMessage = emailError.message;
             }
 
             let receiptEmailSent = null;
             let receiptDeliveryRecorded = null;
+            let receiptEmailErrorMessage = null;
             if (result.followUpReceipt) {
                 receiptEmailSent = false;
                 receiptDeliveryRecorded = false;
@@ -146,6 +191,7 @@ const createReport = async (req, res) => {
                     }
                 } catch (emailError) {
                     console.error("FOLLOW-UP RECEIPT EMAIL ERROR:", emailError);
+                    receiptEmailErrorMessage = emailError.message;
                 }
             }
 
@@ -154,11 +200,13 @@ const createReport = async (req, res) => {
                 success: true,
                 reportId: result.reportId,
                 emailSent,
+                emailError: emailErrorMessage,
                 followUpAppointmentId: result.followUpAppointmentId || null,
                 receiptEmailSent,
+                receiptEmailError: receiptEmailErrorMessage,
                 receiptDeliveryRecorded,
                 message: partialEmailFailure
-                    ? "Report and follow-up were saved, but one or more patient emails could not be sent."
+                    ? `Report saved, but one or more patient emails could not be sent.${emailErrorMessage ? ` Report email error: ${emailErrorMessage}` : ""}${receiptEmailErrorMessage ? ` Follow-up receipt email error: ${receiptEmailErrorMessage}` : ""}`
                     : result.followUpAppointmentId
                         ? "Medical report saved and emailed. The follow-up was accepted and its verified receipt was emailed to the patient."
                         : "Medical report saved and emailed to the patient."
@@ -170,4 +218,33 @@ const createReport = async (req, res) => {
     }
 };
 
-module.exports = { getPendingReports, getReports, createReport };
+const resendReport = async (req, res) => {
+    const reportId = Number(req.params.reportId);
+    if (!Number.isSafeInteger(reportId) || reportId < 1) {
+        return res.status(400).json({ success: false, message: "A valid medical report is required." });
+    }
+
+    medicalReportModel.getReportForWorker(reportId, req.user.id, async (err, report) => {
+        if (err) {
+            console.error("LOAD REPORT FOR RESEND ERROR:", err);
+            return res.status(500).json({ success: false, message: "Unable to load the medical report." });
+        }
+        if (!report) return res.status(404).json({ success: false, message: "Medical report not found." });
+        if (!report.patient_email) {
+            return res.status(409).json({ success: false, message: "The patient account has no email address." });
+        }
+
+        try {
+            await sendMedicalReport(report.patient_email, report.patient_name, report);
+            return res.json({ success: true, message: `Medical report emailed to ${report.patient_email}.` });
+        } catch (emailError) {
+            console.error("RESEND MEDICAL REPORT EMAIL ERROR:", emailError);
+            return res.status(502).json({
+                success: false,
+                message: `The report could not be emailed: ${emailError.message}`
+            });
+        }
+    });
+};
+
+module.exports = { getPendingReports, getReports, getAttachment, createReport, resendReport };
