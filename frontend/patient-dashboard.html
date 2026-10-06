@@ -120,6 +120,17 @@
               <span class="error-message" id="apptTypeError"></span>
             </div>
 
+            <section class="appointment-requirements hidden" id="apptRequirements" aria-live="polite">
+              <h3 id="apptRequirementsTitle">Documents to bring</h3>
+              <ul id="apptRequirementsList"></ul>
+            </section>
+
+            <div class="field hidden" id="otherAppointmentReasonField">
+              <label for="otherAppointmentReason">Why are you choosing Other?</label>
+              <textarea id="otherAppointmentReason" maxlength="500" rows="3" placeholder="Briefly describe the reason for your appointment"></textarea>
+              <span class="error-message" id="otherAppointmentReasonError"></span>
+            </div>
+
             <div class="field">
               <label for="apptDate">Select Date</label>
               <input type="date" id="apptDate" required>

@@ -37,6 +37,13 @@ router.post(
     appointmentController.createAppointment
 );
 
+// Shows the patient which worker is currently assigned to the selected service.
+router.get(
+    "/provider",
+    verifyToken,
+    appointmentController.getProviderForAppointmentType
+);
+
 // Returns only the appointments belonging to the authenticated patient.
 // Get logged-in user's appointments
 router.get(

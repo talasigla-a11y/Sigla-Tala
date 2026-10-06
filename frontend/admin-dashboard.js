@@ -291,6 +291,7 @@ async function loadAppointments() {
         type: apt.appointment_type || 'Appointment',
         jobSpecification: apt.job_specification || 'Health Care workers',
         time: apt.time_preference || 'No time selected',
+        otherReason: apt.other_reason || '',
         status: apt.status || 'Pending',
         user_id: apt.user_id
       }));
@@ -651,6 +652,7 @@ function renderDayDetail(dateISO) {
           <div class="day-patient-main">
             <div class="day-patient-name">${a.patientName || 'Patient'}</div>
             <div class="day-patient-type">${a.type}</div>
+            ${a.otherReason ? `<div class="day-patient-type">Reason: ${escapeReportHTML(a.otherReason)}</div>` : ''}
             <div class="day-patient-type">Assigned to: ${escapeReportHTML(a.jobSpecification)}</div>
             <div class="day-patient-time">${a.time}</div>
           </div>

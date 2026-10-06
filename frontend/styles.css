@@ -1494,8 +1494,8 @@ button {
 }
 
 #appointmentForm textarea {
-  min-height: 120px;
-  padding: 12px 14px;
+  min-height: 96px;
+  padding: 12px;
   resize: vertical;
 }
 
@@ -1516,6 +1516,30 @@ button {
   margin: 0;
   font-size: 12px;
   color: var(--text-muted);
+}
+
+.appointment-requirements {
+  padding: 14px 16px;
+  border: 1px solid #d9e7dd;
+  border-radius: 8px;
+  background: #f1f8f3;
+  color: var(--text-dark);
+}
+
+.appointment-requirements h3 {
+  margin: 0 0 8px;
+  font-size: 14px;
+}
+
+.appointment-requirements ul {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.appointment-requirements li {
+  margin: 5px 0;
+  font-size: 13px;
+  line-height: 1.45;
 }
 
 .field-hint {

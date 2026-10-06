@@ -150,14 +150,17 @@ userModel.ensureSchema((userErr) => {
         if (fileErr) console.error("APPOINTMENT FILE COLUMNS ERROR:", fileErr);
         appointmentModel.ensureAttachmentTable((attachmentErr) => {
             if (attachmentErr) console.error("APPOINTMENT ATTACHMENT TABLE ERROR:", attachmentErr);
-            appointmentModel.ensureJobSpecificationColumn((jobSpecificationErr) => {
-                if (jobSpecificationErr) console.error("APPOINTMENT JOB SPECIFICATION COLUMN ERROR:", jobSpecificationErr);
-                medicalReportModel.createTable((reportErr) => {
-                    if (reportErr) console.error("MEDICAL REPORT TABLE ERROR:", reportErr);
-                    announcementModel.createTable((err) => {
-                        if (err) console.error("ANNOUNCEMENTS TABLE ERROR:", err);
-                        app.listen(port, () => {
-                            console.log(`✅ Server running on port ${port}`);
+            appointmentModel.ensureOtherReasonColumn((otherReasonErr) => {
+                if (otherReasonErr) console.error("APPOINTMENT OTHER REASON COLUMN ERROR:", otherReasonErr);
+                appointmentModel.ensureJobSpecificationColumn((jobSpecificationErr) => {
+                    if (jobSpecificationErr) console.error("APPOINTMENT JOB SPECIFICATION COLUMN ERROR:", jobSpecificationErr);
+                    medicalReportModel.createTable((reportErr) => {
+                        if (reportErr) console.error("MEDICAL REPORT TABLE ERROR:", reportErr);
+                        announcementModel.createTable((err) => {
+                            if (err) console.error("ANNOUNCEMENTS TABLE ERROR:", err);
+                            app.listen(port, () => {
+                                console.log(`✅ Server running on port ${port}`);
+                            });
                         });
                     });
                 });

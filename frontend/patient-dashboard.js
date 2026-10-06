@@ -745,14 +745,130 @@ const appointmentProvider =
         "apptProvider"
     );
 
-if (appointmentType && appointmentProvider) {
-    // Updates the displayed staff specialty when the appointment type changes.
-    appointmentType.addEventListener("change", function () {
-        const selectedOption = appointmentType.options[appointmentType.selectedIndex];
-        appointmentProvider.textContent = selectedOption.dataset.jobSpecification
-            ? `Assigned to: ${selectedOption.dataset.jobSpecification}`
-            : "Assigned to: Select an appointment type";
+const appointmentRequirements =
+    document.getElementById("apptRequirements");
+
+const appointmentRequirementsList =
+    document.getElementById("apptRequirementsList");
+
+const otherAppointmentReasonField =
+    document.getElementById("otherAppointmentReasonField");
+
+const otherAppointmentReason =
+    document.getElementById("otherAppointmentReason");
+
+const otherAppointmentReasonError =
+    document.getElementById("otherAppointmentReasonError");
+
+const requirementsByAppointmentType = {
+    "general consultation": [
+        "Valid government-issued ID or Barangay ID showing proof of residency.",
+        "Barangay Clearance or Certificate of Residency for first-time visitors.",
+        "Individual Treatment Record (ITR) or Health Center Card for returning patients.",
+        "PhilHealth ID number or PhilHealth YAKAP registration (optional; helpful for lab tests and medicines).",
+        "Medical records or previous prescriptions for ongoing conditions, if applicable."
+    ],
+    vaccination: [
+        "Infants and children: Mother and Child Booklet or Baby's Immunization (EPI) Card.",
+        "Infants and children registering for the first time: Child's PSA or LCR Birth Certificate and the parent/guardian's valid ID.",
+        "Adults and seniors: Valid government ID or Senior Citizen ID.",
+        "Adults and seniors: Previous vaccination card or record, if available.",
+        "Anti-rabies vaccination: Animal Bite Incident Form or referral."
+    ],
+    "prenatal check-up": [
+        "Home-Based Mother Record (HBMR) or Pink Card; it may be provided at the first check-up.",
+        "Valid ID of the mother.",
+        "PSA Birth Certificate or Marriage Contract for record verification.",
+        "PhilHealth Member ID or Member Data Record (MDR), if available.",
+        "Previous ultrasound, blood test, or laboratory results, if available."
+    ],
+    dental: [
+        "Valid government-issued ID or Barangay ID.",
+        "Health Center Patient Card or record, if available.",
+        "PhilHealth YAKAP enrollment, if available.",
+        "Patients under 18 receiving a tooth extraction: signed parental consent form."
+    ],
+    "pediatric consultation": [
+        "Child's PSA or Local Civil Registrar (LCR) Birth Certificate.",
+        "Baby's Growth and Development Chart or Immunization Card, if available.",
+        "Valid ID of the parent or legal guardian.",
+        "If accompanied by someone other than a parent: authorization letter and the guardian's valid ID."
+    ],
+    other: []
+};
+
+let providerRequestId = 0;
+
+// Shows the service-specific document checklist and fetches the currently assigned worker.
+async function updateAppointmentTypeDetails() {
+    if (!appointmentType || !appointmentProvider) return;
+
+    const requestId = ++providerRequestId;
+    const selectedOption = appointmentType.options[appointmentType.selectedIndex];
+    const appointmentTypeName = selectedOption.text.trim();
+    const appointmentTypeKey = appointmentTypeName.toLowerCase();
+    const requirements = requirementsByAppointmentType[appointmentTypeKey];
+    const isOther = appointmentType.value === "other";
+
+    if (!appointmentType.value) {
+        appointmentProvider.textContent = "Assigned to: Select an appointment type";
+        appointmentRequirements.classList.add("hidden");
+        appointmentRequirementsList.replaceChildren();
+        otherAppointmentReasonField.classList.add("hidden");
+        return;
+    }
+
+    appointmentRequirementsList.replaceChildren();
+    requirements.forEach((requirement) => {
+        const item = document.createElement("li");
+        item.textContent = requirement;
+        appointmentRequirementsList.appendChild(item);
     });
+    appointmentRequirements.classList.toggle("hidden", isOther);
+    otherAppointmentReasonField.classList.toggle("hidden", !isOther);
+    if (!isOther && otherAppointmentReason) {
+        otherAppointmentReason.value = "";
+        otherAppointmentReasonError.textContent = "";
+    }
+
+    appointmentProvider.textContent = `Assigned to: Loading ${selectedOption.dataset.jobSpecification || "worker"}...`;
+
+    const token = localStorage.getItem("token");
+    if (!token) {
+        appointmentProvider.textContent = "Assigned worker details are available after signing in.";
+        return;
+    }
+
+    try {
+        const response = await fetch(
+            `${API_BASE_URL}/api/appointments/provider?appointment_type=${encodeURIComponent(appointmentTypeName)}`,
+            {
+                method: "GET",
+                headers: { Authorization: `Bearer ${token}` }
+            }
+        );
+        const data = await response.json().catch(() => ({}));
+
+        if (requestId !== providerRequestId) return;
+
+        if (!response.ok) {
+            appointmentProvider.textContent =
+                data.message || "Unable to load the assigned worker.";
+            return;
+        }
+
+        appointmentProvider.textContent = data.provider
+            ? `Responsible doctor/health worker: ${data.provider.fullname} (${data.provider.job_specification})`
+            : `No ${data.job_specification} is currently assigned. Please contact the health center.`;
+    } catch (error) {
+        if (requestId !== providerRequestId) return;
+        console.error("APPOINTMENT PROVIDER ERROR:", error);
+        appointmentProvider.textContent = "Unable to connect to load the assigned worker.";
+    }
+}
+
+if (appointmentType) {
+    appointmentType.addEventListener("change", updateAppointmentTypeDetails);
 }
 
 const appointmentDate =
@@ -1031,6 +1147,10 @@ function renderAppointments(
                             .join(", ")
                         : "";
 
+                const otherReason = appointment.other_reason
+                    ? `<br>Reason: ${escapeHTML(appointment.other_reason)}`
+                    : "";
+
                 return `
 
                     <div class="appointment-item">
@@ -1061,6 +1181,7 @@ function renderAppointments(
                             ${escapeHTML(date)}
                             ·
                             ${escapeHTML(time)}
+                            ${otherReason}
                             ${attachmentNames ? `<br>Attachments: ${attachmentNames}` : ""}
 
                         </div>
@@ -1127,6 +1248,10 @@ if (appointmentForm) {
                     "apptTimeError"
                 );
 
+            const otherReason = otherAppointmentReason
+                ? otherAppointmentReason.value.trim()
+                : "";
+
 
             let valid = true;
 
@@ -1150,6 +1275,18 @@ if (appointmentForm) {
 
                 typeError.textContent = "";
 
+            }
+
+            if (
+                appointmentType &&
+                appointmentType.value === "other" &&
+                !otherReason
+            ) {
+                otherAppointmentReasonError.textContent =
+                    "Please tell us why you are choosing Other.";
+                valid = false;
+            } else if (otherAppointmentReasonError) {
+                otherAppointmentReasonError.textContent = "";
             }
 
 
@@ -1240,6 +1377,9 @@ if (appointmentForm) {
                 appointmentData.append("appointment_type", selectedOption.text);
                 appointmentData.append("appointment_date", appointmentDate.value);
                 appointmentData.append("time_preference", appointmentTime ? appointmentTime.value : "");
+                if (appointmentType.value === "other") {
+                    appointmentData.append("other_reason", otherReason);
+                }
                 if (appointmentFile && appointmentFile.files.length) {
                     Array.from(appointmentFile.files).forEach((file) => {
                         appointmentData.append("attachments", file);
@@ -1308,6 +1448,14 @@ if (appointmentForm) {
 
 
                 appointmentForm.reset();
+
+                if (otherAppointmentReasonField) {
+                    otherAppointmentReasonField.classList.add("hidden");
+                }
+
+                if (appointmentRequirements) {
+                    appointmentRequirements.classList.add("hidden");
+                }
 
                 if (appointmentProvider) {
                     appointmentProvider.textContent =

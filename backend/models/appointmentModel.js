@@ -8,6 +8,14 @@ const addFileColumns = (callback) => {
     });
 };
 
+// Adds an optional reason for appointments booked under the "Other" type.
+const ensureOtherReasonColumn = (callback) => {
+    db.query("ALTER TABLE appointments ADD COLUMN other_reason VARCHAR(500) NULL", (err) => {
+        if (err && err.code !== "ER_DUP_FIELDNAME") return callback(err);
+        callback(null);
+    });
+};
+
 // Creates a separate attachment row for each uploaded appointment file.
 const ensureAttachmentTable = (callback) => {
     const sql = `
@@ -150,11 +158,12 @@ const createAppointment = (appointment, callback) => {
             assigned_admin_id,
             appointment_date,
             time_preference,
+            other_reason,
             status,
             file_name,
             file_data
         )
-        VALUES (?, ?, ?, ?, ?, ?, 'Pending', ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, 'Pending', ?, ?)
     `;
 
     const attachments = appointment.attachments || [];
@@ -171,6 +180,7 @@ const createAppointment = (appointment, callback) => {
                 appointment.assigned_admin_id,
                 appointment.appointment_date,
                 appointment.time_preference,
+                appointment.other_reason || null,
                 attachments[0] ? attachments[0].file_name : null,
                 attachments[0] ? attachments[0].file_data : null
             ],
@@ -271,6 +281,7 @@ const getAppointmentsByUserId = (userId, callback) => {
             a.assigned_admin_id,
             a.appointment_date,
             a.time_preference,
+            a.other_reason,
             a.status,
             a.file_name,
             a.created_at,
@@ -300,6 +311,7 @@ const getAllAppointments = (adminId, callback) => {
             a.assigned_admin_id,
             a.appointment_date,
             a.time_preference,
+            a.other_reason,
             a.status,
             a.file_name,
             a.created_at,
@@ -335,6 +347,7 @@ const updateAppointmentStatus = (appointmentId, status, adminId, callback) => {
 
 module.exports = {
     addFileColumns,
+    ensureOtherReasonColumn,
     ensureAttachmentTable,
     ensureJobSpecificationColumn,
     getAdminByJobSpecification,

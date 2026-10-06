@@ -15,6 +15,35 @@ const jobSpecificationByAppointmentType = {
 const getJobSpecification = (appointmentType) =>
     jobSpecificationByAppointmentType[String(appointmentType).trim().toLowerCase()] || "Health Care workers";
 
+// Looks up the worker who would be assigned to the selected appointment type.
+const getProviderForAppointmentType = (req, res) => {
+    const appointmentType = String(req.query.appointment_type || "").trim().toLowerCase();
+    const job_specification = jobSpecificationByAppointmentType[appointmentType];
+
+    if (!job_specification) {
+        return res.status(400).json({
+            success: false,
+            message: "Select a valid appointment type."
+        });
+    }
+
+    appointmentModel.getAdminByJobSpecification(job_specification, (err, providers) => {
+        if (err) {
+            console.error("FIND APPOINTMENT PROVIDER ERROR:", err);
+            return res.status(500).json({
+                success: false,
+                message: "Unable to load the responsible health worker."
+            });
+        }
+
+        return res.status(200).json({
+            success: true,
+            job_specification,
+            provider: providers.length ? providers[0] : null
+        });
+    });
+};
+
 // ================= CREATE APPOINTMENT =================
 // Validates patient input, attaches the logged-in user ID, and creates an appointment.
 const createAppointment = (req, res) => {
@@ -22,7 +51,8 @@ const createAppointment = (req, res) => {
         const {
             appointment_type,
             appointment_date,
-            time_preference
+            time_preference,
+            other_reason
         } = req.body;
 
         // Get the logged-in user's ID from JWT middleware
@@ -40,6 +70,19 @@ const createAppointment = (req, res) => {
         }
 
         const normalizedTimePreference = time_preference && String(time_preference).trim() ? String(time_preference).trim() : null;
+        const normalizedAppointmentType = String(appointment_type).trim().toLowerCase();
+        const normalizedOtherReason =
+            normalizedAppointmentType === "other" && other_reason
+                ? String(other_reason).trim().slice(0, 500)
+                : null;
+
+        if (normalizedAppointmentType === "other" && !normalizedOtherReason) {
+            return res.status(400).json({
+                success: false,
+                message: "Please tell us why you are choosing Other."
+            });
+        }
+
         const job_specification = getJobSpecification(appointment_type);
         const attachments = (req.files || []).map((file) => ({
             file_name: file.originalname,
@@ -72,6 +115,7 @@ const createAppointment = (req, res) => {
                     assigned_admin_name: assignedAdmin.fullname,
                     appointment_date,
                     time_preference: normalizedTimePreference,
+                    other_reason: normalizedOtherReason,
                     attachments
                 };
 
@@ -97,6 +141,7 @@ const createAppointment = (req, res) => {
                             assigned_admin_name: appointment.assigned_admin_name,
                             appointment_date: appointment.appointment_date,
                             time_preference: appointment.time_preference,
+                            other_reason: appointment.other_reason,
                             attachments: attachments.map((attachment) => ({
                                 id: null,
                                 file_name: attachment.file_name
@@ -271,6 +316,7 @@ const updateAppointmentStatus = (req, res) => {
 
 
 module.exports = {
+    getProviderForAppointmentType,
     createAppointment,
     getMyAppointments,
     getAllAppointments,
