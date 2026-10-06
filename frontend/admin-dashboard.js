@@ -799,16 +799,30 @@ function escapeReportHTML(value) {
   return String(value || '').replace(/[&<>"']/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[character]));
 }
 
+function normalizeReportSearchText(value) {
+  return String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLocaleLowerCase()
+    .trim();
+}
+
 // Filters encoded reports by patient name and report details as the worker types.
 function renderMedicalReports() {
-  const query = reportSearch.value.trim().toLocaleLowerCase();
-  const reports = medicalReportEntries.filter((report) => [
-    report.patient_name,
-    report.diagnostic,
-    report.notes,
-    report.recorded_date,
-    report.doctor_name,
-  ].some((value) => String(value || '').toLocaleLowerCase().includes(query)));
+  const query = normalizeReportSearchText(reportSearch.value);
+  const queryWords = query.split(/\s+/).filter(Boolean);
+  const reports = medicalReportEntries.filter((report) => {
+    const patientName = normalizeReportSearchText(report.patient_name);
+    const patientNameMatches = queryWords.every((word) => patientName.includes(word));
+    if (patientNameMatches) return true;
+
+    return [
+      report.diagnostic,
+      report.notes,
+      report.recorded_date,
+      report.doctor_name,
+    ].some((value) => normalizeReportSearchText(value).includes(query));
+  });
 
   medicalReportsList.innerHTML = reports.length ? reports.map((report) => `
     <article class="announcement-card">

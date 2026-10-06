@@ -7,11 +7,25 @@ const escapeHtml = (value) => String(value || "")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#039;");
 
-// Sends a generated medical report to the patient's registered email address.
-module.exports = async (email, patientName, report) => {
+// Sends a generated medical report and optional follow-up schedule to the patient.
+module.exports = async (email, patientName, report, followUp = null) => {
+    const followUpSection = followUp
+        ? `
+        <hr>
+        <h3>Follow-up Check-up</h3>
+        <p>Your follow-up appointment has been accepted.</p>
+        <p><strong>Date:</strong> ${escapeHtml(followUp.date)}</p>
+        <p><strong>Time:</strong> ${escapeHtml(followUp.time)}</p>
+        <p><strong>Health Worker:</strong> ${escapeHtml(followUp.workerName || report.doctor_name)}</p>
+        <p>A separate verified appointment receipt has also been sent to this email.</p>
+    `
+        : "";
+
     await sendEmail({
         to: email,
-        subject: "Sigla Tala Medical Report",
+        subject: followUp
+            ? "Sigla Tala Medical Report and Follow-up Check-up"
+            : "Sigla Tala Medical Report",
         html: `
         <h2>Medical Report</h2>
         <p>Dear ${escapeHtml(patientName)},</p>
@@ -21,6 +35,7 @@ module.exports = async (email, patientName, report) => {
         <p><strong>Diagnosis:</strong> ${escapeHtml(report.diagnostic)}</p>
         <p><strong>Medical Notes:</strong></p>
         <p>${escapeHtml(report.notes).replace(/\r?\n/g, "<br>")}</p>
+        ${followUpSection}
     `
     });
 };

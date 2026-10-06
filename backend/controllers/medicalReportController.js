@@ -164,7 +164,12 @@ const createReport = async (req, res) => {
             try {
                 const patient = await getProfile(userId);
                 if (!patient.email) throw new Error("The patient account has no email address.");
-                await sendMedicalReport(patient.email, patient.fullname, report);
+                await sendMedicalReport(
+                    patient.email,
+                    patient.fullname,
+                    report,
+                    followUp ? { ...followUp, workerName: worker.fullname } : null
+                );
                 emailSent = true;
             } catch (emailError) {
                 console.error("MEDICAL REPORT EMAIL ERROR:", emailError);
