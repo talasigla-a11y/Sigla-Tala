@@ -5,7 +5,6 @@ const crypto = require("crypto");
 const { sendAppointmentReceipt } = require("../utils/appointmentReceipt");
 const sendMedicalReport = require("../utils/sendMedicalReport");
 
-// Returns appointments that are ready for a medical report to be created.
 const getPendingReports = (req, res) => {
     medicalReportModel.getPendingAppointments(req.user.id, (err, results) => {
         if (err) return res.status(500).json({ success: false, message: "Failed to load pending reports." });
@@ -13,7 +12,6 @@ const getPendingReports = (req, res) => {
     });
 };
 
-// Retrieves medical reports created for appointments assigned to this worker.
 const getReports = (req, res) => {
     medicalReportModel.getAllReports(req.user.id, (err, results) => {
         if (err) return res.status(500).json({ success: false, message: "Failed to load medical reports." });
@@ -90,7 +88,6 @@ const isValidDate = (value) => {
     return !Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value;
 };
 
-// Saves a report and optional automatically accepted follow-up for the authenticated worker.
 const createReport = async (req, res) => {
     const appointmentId = Number(req.body.appointment_id);
     const userId = Number(req.body.user_id);

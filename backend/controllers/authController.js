@@ -12,15 +12,11 @@ const ADMIN_JOB_SPECIFICATIONS = [
     "Pediatrician"
 ];
 
-// Normalizes user input before it is compared with or stored in the database.
 const sanitizeEmail = (value) => String(value || "").trim().toLowerCase();
 const sanitizeName = (value) => String(value || "").trim();
 
-// Requires at least 8 characters, one uppercase letter, one number, and one allowed symbol.
 const isStrongPassword = (value) => /^(?=.*[A-Z])(?=.*\d)(?=.*[_*&%]).{8,}$/.test(value);
 
-// Called after the OTP is saved; attempts delivery and returns only whether the email was sent,
-// so a mail-provider failure does not stop the user from entering the saved OTP.
 const trySendOTP = async (email, otp, purpose) => {
     try {
         await sendOTP(email, otp);
@@ -31,7 +27,6 @@ const trySendOTP = async (email, otp, purpose) => {
     }
 };
 
-// Restricts roles to the two application roles; public registration always creates patients.
 const normalizeRole = (input) => {
     const role = String(input || "patient").trim();
     const normalized = role.toLowerCase();
@@ -43,8 +38,6 @@ const normalizeRole = (input) => {
     return normalized === "patient" ? "patient" : "patient";
 };
 
-// ================= REGISTER =================
-// Creates a patient account, hashes the password, and sends an email-verification OTP.
 const register = async (req, res) => {
     try {
         const fullname = sanitizeName(req.body.fullname);
@@ -129,8 +122,6 @@ const register = async (req, res) => {
     }
 };
 
-// ================= LOGIN =================
-// Verifies the password, creates a short-lived login OTP, and emails it to the user.
 const login = (req, res) => {
 
     const email = sanitizeEmail(req.body.email);
@@ -177,10 +168,8 @@ const login = (req, res) => {
             });
         }
 
-        // Generate Login OTP
         const loginOTP = Math.floor(100000 + Math.random() * 900000).toString();
 
-        // Expire after 5 minutes
         const expires = new Date(Date.now() + 5 * 60 * 1000);
 
         userModel.saveLoginOTP(email, loginOTP, expires, async (err) => {
@@ -207,8 +196,6 @@ const login = (req, res) => {
 
 };
 
-// ================= REGISTER OTP =================
-// Confirms the registration OTP and marks the account as email-verified.
 const verifyOTP = (req, res) => {
 
     const { email, otp } = req.body;
@@ -258,7 +245,6 @@ const verifyOTP = (req, res) => {
 
 };
 
-// Starts password recovery by generating and emailing a time-limited reset OTP.
 const forgotPassword = (req, res) => {
 
     const { email } = req.body;
@@ -322,7 +308,6 @@ const forgotPassword = (req, res) => {
 
 };
 
-// Validates the reset OTP, hashes the new password, and clears the recovery code.
 const resetPassword = async (req, res) => {
 
     const email = sanitizeEmail(req.body.email);
@@ -404,7 +389,6 @@ const resetPassword = async (req, res) => {
 
 };
 
-// Verifies the second login factor and returns a signed JWT for future API requests.
 const verifyLoginOTP = (req, res) => {
 
     const { email, otp } = req.body;
@@ -427,7 +411,6 @@ const verifyLoginOTP = (req, res) => {
 
         const user = results[0];
 
-        // Generate JWT
         const token = jwt.sign(
     {
         id: user.id,
@@ -440,7 +423,6 @@ const verifyLoginOTP = (req, res) => {
     }
 );
 
-        // Clear OTP after successful login
         userModel.clearLoginOTP(email, (err) => {
 
             if (err) {
@@ -471,8 +453,6 @@ const verifyLoginOTP = (req, res) => {
 
 };
 
-// ================= UPDATE PROFILE =================
-// Updates editable profile fields for the user identified by the JWT.
 const updateProfile = (req, res) => {
     const fullname = String(req.body.fullname || "").trim();
     const age = Number(req.body.age);
@@ -534,7 +514,6 @@ const updateProfile = (req, res) => {
     });
 };
 
-// Returns the authenticated user's profile without exposing the password hash.
 const getProfile = (req, res) => {
     userModel.getProfileById(req.user.id, (err, results) => {
         if (err) {

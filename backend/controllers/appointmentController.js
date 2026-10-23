@@ -13,11 +13,9 @@ const jobSpecificationByAppointmentType = {
     other: "Health Care workers"
 };
 
-// Resolves an appointment type to the specialty of its responsible admin.
 const getJobSpecification = (appointmentType) =>
     jobSpecificationByAppointmentType[String(appointmentType).trim().toLowerCase()] || "Health Care workers";
 
-// Looks up the worker who would be assigned to the selected appointment type.
 const getProviderForAppointmentType = (req, res) => {
     const appointmentType = String(req.query.appointment_type || "").trim().toLowerCase();
     const job_specification = jobSpecificationByAppointmentType[appointmentType];
@@ -46,8 +44,6 @@ const getProviderForAppointmentType = (req, res) => {
     });
 };
 
-// ================= CREATE APPOINTMENT =================
-// Validates patient input, attaches the logged-in user ID, and creates an appointment.
 const createAppointment = (req, res) => {
     try {
         const {
@@ -57,10 +53,8 @@ const createAppointment = (req, res) => {
             other_reason
         } = req.body;
 
-        // Get the logged-in user's ID from JWT middleware
         const user_id = req.user.id;
 
-        // Validate fields
         if (
             !appointment_type ||
             !appointment_date
@@ -190,11 +184,8 @@ const createAppointment = (req, res) => {
 };
 
 
-// ================= GET MY APPOINTMENTS =================
-// Loads only the appointments owned by the authenticated patient.
 const getMyAppointments = (req, res) => {
     try {
-        // Get logged-in user's ID from JWT
         const user_id = req.user.id;
 
         appointmentModel.getAppointmentsByUserId(
@@ -226,7 +217,6 @@ const getMyAppointments = (req, res) => {
     }
 };
 
-// Verifies a private emailed receipt link without exposing appointments by ID alone.
 const verifyAppointmentReceipt = (req, res) => {
     res.set("Cache-Control", "no-store");
 
@@ -277,12 +267,8 @@ const verifyAppointmentReceipt = (req, res) => {
 };
 
 
-// ================= GET ALL APPOINTMENTS (ADMIN) =================
-// Loads appointments assigned to the authenticated administrator.
 const getAllAppointments = (req, res) => {
     try {
-        // For demo mode (no auth required) or admin users
-        // In production, add back verifyToken middleware to the route
         
         appointmentModel.getAllAppointments(
             req.user.id,
@@ -314,13 +300,10 @@ const getAllAppointments = (req, res) => {
 };
 
 
-// ================= UPDATE APPOINTMENT STATUS =================
-// Validates an admin decision and persists the new appointment status.
 const updateAppointmentStatus = (req, res) => {
     try {
         const { appointmentId, status } = req.body;
 
-        // Validate status (check for capitalized versions)
         if (!['Pending', 'Accepted', 'Rejected', 'Completed', 'Cancelled'].includes(status)) {
             return res.status(400).json({
                 success: false,

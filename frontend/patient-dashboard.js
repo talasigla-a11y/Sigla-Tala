@@ -1,13 +1,8 @@
-// ======================================
-// SIGLA TALA - PATIENT DASHBOARD JS
-// ======================================
 
-// Uses the production API by default while allowing a local API URL override.
 const API_BASE_URL = window.SIGLA_TALA_API_URL || "https://api.siglatala.com";
 const LOGIN_URL = "login.html";
 const INACTIVITY_TIMEOUT_MS = 10 * 60 * 1000;
 
-// Clears browser-stored credentials and patient information during logout.
 function clearAuthSession() {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
@@ -15,7 +10,6 @@ function clearAuthSession() {
     sessionStorage.removeItem("siglaTalaAuthView");
 }
 
-// Ends the session and returns the patient to the login page.
 function forceLogout(message = "You were logged out due to inactivity.") {
     clearAuthSession();
 
@@ -29,7 +23,6 @@ function forceLogout(message = "You were logged out due to inactivity.") {
     }, 500);
 }
 
-// Restarts the patient inactivity timer after a user interaction.
 function resetInactivityTimer() {
     if (!localStorage.getItem("token")) return;
     clearTimeout(window.siglaInactivityTimer);
@@ -42,7 +35,6 @@ function resetInactivityTimer() {
     document.addEventListener(eventName, resetInactivityTimer, { passive: true });
 });
 
-// Clears patient credentials when the browser leaves or reloads the dashboard.
 window.addEventListener("beforeunload", function () {
     if (localStorage.getItem("token")) {
         clearAuthSession();
@@ -57,9 +49,6 @@ window.addEventListener("pagehide", function () {
 
 window.addEventListener("load", resetInactivityTimer);
 
-// ======================================
-// GET ELEMENTS
-// ======================================
 
 const userMenu =
     document.getElementById("userMenu");
@@ -89,9 +78,6 @@ const announcementGrid =
     document.getElementById("announcementGrid");
 
 
-// ======================================
-// DASHBOARD VIEWS
-// ======================================
 
 const dashboardView =
     document.getElementById("dashboardView");
@@ -117,20 +103,13 @@ const views = {
 };
 
 
-// ======================================
-// USER DATA
-// ======================================
 
 let currentUser = {};
 
 let toastTimer;
 
 
-// ======================================
-// TOAST
-// ======================================
 
-// Shows feedback after a patient action such as booking an appointment.
 function showToast(message, type = "success") {
 
     if (!toast) return;
@@ -151,11 +130,7 @@ function showToast(message, type = "success") {
 }
 
 
-// ======================================
-// FIRST NAME
-// ======================================
 
-// Converts the stored full name into a short dashboard greeting.
 function getFirstName(name) {
 
     if (!name) {
@@ -169,11 +144,7 @@ function getFirstName(name) {
 }
 
 
-// ======================================
-// SHOW VIEW
-// ======================================
 
-// Switches between the patient dashboard, appointments, and account views.
 function showView(viewName) {
 
     Object.keys(views).forEach((key) => {
@@ -199,7 +170,6 @@ function showView(viewName) {
     });
 
 
-    // Highlight active menu
     document
         .querySelectorAll(
             ".user-dropdown-item[data-view]"
@@ -221,8 +191,6 @@ function showView(viewName) {
     }
 
 
-    // Load appointments whenever
-    // appointment page is opened
     if (viewName === "appointment") {
 
         loadAppointments();
@@ -231,11 +199,7 @@ function showView(viewName) {
 
 }
 
-// ======================================
-// LOAD ANNOUNCEMENTS
-// ======================================
 
-// Fetches clinic announcements and displays them on the patient dashboard.
 async function loadAnnouncements() {
 
     if (!announcementGrid) {
@@ -273,11 +237,7 @@ async function loadAnnouncements() {
 }
 
 
-// ======================================
-// USER MENU
-// ======================================
 
-// Opens the patient profile dropdown.
 function openUserMenu() {
 
     if (!userDropdown) return;
@@ -302,7 +262,6 @@ function openUserMenu() {
 }
 
 
-// Closes the patient profile dropdown.
 function closeUserMenu() {
 
     if (!userDropdown) return;
@@ -329,7 +288,6 @@ function closeUserMenu() {
 
 if (userMenuTrigger) {
 
-    // Opens or closes the patient profile dropdown.
     userMenuTrigger.addEventListener(
         "click",
         function (event) {
@@ -356,10 +314,8 @@ if (userMenuTrigger) {
 }
 
 
-// Close menu when clicking outside
 document.addEventListener(
     "click",
-    // Closes the profile dropdown when a click occurs outside the menu.
     function (event) {
 
         if (
@@ -375,9 +331,6 @@ document.addEventListener(
 );
 
 
-// ======================================
-// DROPDOWN NAVIGATION
-// ======================================
 
 document
     .querySelectorAll(
@@ -385,7 +338,6 @@ document
     )
     .forEach((button) => {
 
-    // Switches to the view selected from the patient navigation menu.
         button.addEventListener(
             "click",
             function () {
@@ -400,13 +352,9 @@ document
     });
 
 
-// ======================================
-// LOGOUT
-// ======================================
 
 if (logOutBtn) {
 
-    // Clears the patient session and returns to the login screen.
     logOutBtn.addEventListener(
         "click",
         function () {
@@ -429,11 +377,7 @@ if (logOutBtn) {
 }
 
 
-// ======================================
-// LOAD USER INFORMATION
-// ======================================
 
-// Populates the header and account screen using the logged-in user's data.
 function loadUserInformation() {
 
     const savedUser =
@@ -475,7 +419,6 @@ function loadUserInformation() {
         "";
 
 
-    // Header
     if (userMenuName) {
 
         userMenuName.textContent =
@@ -484,7 +427,6 @@ function loadUserInformation() {
     }
 
 
-    // Dropdown
     if (dropdownName) {
 
         dropdownName.textContent =
@@ -501,7 +443,6 @@ function loadUserInformation() {
     }
 
 
-    // Account form
     const fullName =
         document.getElementById(
             "accFullName"
@@ -559,7 +500,6 @@ function loadUserInformation() {
 
 }
 
-// Retrieves the latest profile values from the protected backend endpoint.
 async function loadSavedProfile() {
     const token = localStorage.getItem("token");
     if (!token) return;
@@ -580,11 +520,7 @@ async function loadSavedProfile() {
 }
 
 
-// ======================================
-// SESSION CHECK
-// ======================================
 
-// Verifies that a stored JWT is still accepted before loading private data.
 async function checkSession() {
 
     const token =
@@ -624,7 +560,6 @@ async function checkSession() {
     }
 
 
-    // No login
     if (!token || !savedUser) {
 
         window.location.href =
@@ -635,7 +570,6 @@ async function checkSession() {
     }
 
 
-    // Check saved user data
     if (!loadUserInformation()) {
 
         localStorage.removeItem(
@@ -654,7 +588,6 @@ async function checkSession() {
     }
 
 
-    // Optional backend verification
     try {
 
         const response =
@@ -692,9 +625,6 @@ async function checkSession() {
         }
 
 
-        // If endpoint doesn't exist,
-        // don't immediately destroy the
-        // local login session.
         if (
             !response.ok &&
             response.status !== 404
@@ -715,9 +645,6 @@ async function checkSession() {
             error
         );
 
-        // We keep the local session here.
-        // This allows the dashboard to work
-        // even if /dashboard isn't implemented.
     }
 
 
@@ -726,9 +653,6 @@ async function checkSession() {
 }
 
 
-// ======================================
-// APPOINTMENT ELEMENTS
-// ======================================
 
 const appointmentForm =
     document.getElementById(
@@ -799,7 +723,6 @@ const requirementsByAppointmentType = {
 
 let providerRequestId = 0;
 
-// Shows the service-specific document checklist and fetches the currently assigned worker.
 async function updateAppointmentTypeDetails() {
     if (!appointmentType || !appointmentProvider) return;
 
@@ -900,9 +823,6 @@ const appointmentsList =
     );
 
 
-// ======================================
-// MINIMUM APPOINTMENT DATE
-// ======================================
 
 if (appointmentDate) {
 
@@ -932,13 +852,9 @@ if (appointmentDate) {
 }
 
 
-// ======================================
-// FILE UPLOAD DISPLAY
-// ======================================
 
 if (appointmentFile) {
 
-    // Lists selected filenames and rejects selections above the server limit.
     appointmentFile.addEventListener(
         "change",
         function () {
@@ -977,11 +893,7 @@ if (appointmentFile) {
 }
 
 
-// ======================================
-// LOAD APPOINTMENTS
-// ======================================
 
-// Retrieves the patient's appointments and refreshes the appointment list.
 async function loadAppointments() {
 
     if (!appointmentsList) {
@@ -1085,11 +997,7 @@ async function loadAppointments() {
 }
 
 
-// ======================================
-// RENDER APPOINTMENTS
-// ======================================
 
-// Converts appointment records into status-aware cards for the patient.
 function renderAppointments(
     appointments
 ) {
@@ -1201,11 +1109,7 @@ function renderAppointments(
 }
 
 
-// ======================================
-// SECURITY - ESCAPE HTML
-// ======================================
 
-// Escapes server-provided text before inserting it into the page.
 function escapeHTML(value) {
 
     return String(value)
@@ -1223,13 +1127,9 @@ function escapeHTML(value) {
 }
 
 
-// ======================================
-// SUBMIT APPOINTMENT
-// ======================================
 
 if (appointmentForm) {
 
-    // Validates and submits a new appointment with its optional attachment.
     appointmentForm.addEventListener(
         "submit",
         async function (event) {
@@ -1261,7 +1161,6 @@ if (appointmentForm) {
             let valid = true;
 
 
-            // Appointment type
             if (
                 !appointmentType ||
                 !appointmentType.value
@@ -1295,7 +1194,6 @@ if (appointmentForm) {
             }
 
 
-            // Date
             if (
                 !appointmentDate ||
                 !appointmentDate.value
@@ -1316,7 +1214,6 @@ if (appointmentForm) {
 
             }
 
-            // Time preference
             if (
                 !appointmentTime ||
                 !appointmentTime.value
@@ -1508,9 +1405,6 @@ if (appointmentForm) {
 }
 
 
-// ======================================
-// ACCOUNT FORM
-// ======================================
 
 const accountForm =
     document.getElementById(
@@ -1518,7 +1412,6 @@ const accountForm =
     );
 
 if (accountForm) {
-    // Saves profile changes to the authenticated user's account.
     accountForm.addEventListener(
         "submit",
         async function (event) {
@@ -1567,7 +1460,6 @@ if (accountForm) {
 }
 
 
-// Verifies the patient session, loads dashboard data, and starts announcement refreshes.
 window.addEventListener("DOMContentLoaded", async function () {
     const loggedIn = await checkSession();
     if (!loggedIn) return;

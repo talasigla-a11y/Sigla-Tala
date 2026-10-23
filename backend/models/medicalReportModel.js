@@ -1,6 +1,5 @@
 const db = require("../database/db");
 
-// Creates the medical reports table during startup.
 const createTable = (callback) => {
     const sql = `
         CREATE TABLE IF NOT EXISTS medical_reports (
@@ -52,7 +51,6 @@ const addReportAttachments = (records, workerId, callback) => {
     });
 };
 
-// Finds completed appointments that do not yet have a medical report.
 const getPendingAppointments = (workerId, callback) => {
     const sql = `
         SELECT a.id AS appointment_id, a.user_id, a.appointment_date,
@@ -79,7 +77,6 @@ const getPendingAppointments = (workerId, callback) => {
     });
 };
 
-// Retrieves reports together with the related patient and appointment data.
 const getAllReports = (workerId, callback) => {
     const sql = `
         SELECT r.*, a.id AS appointment_id, a.file_name, u.fullname AS patient_name
@@ -95,7 +92,6 @@ const getAllReports = (workerId, callback) => {
     });
 };
 
-// Loads an uploaded file only when its appointment belongs to the requesting worker.
 const getAppointmentAttachment = (appointmentId, attachmentId, workerId, callback) => {
     if (attachmentId === "legacy") {
         const legacySql = `
@@ -128,7 +124,6 @@ const getAppointmentAttachment = (appointmentId, attachmentId, workerId, callbac
     });
 };
 
-// Loads a saved report and patient email for a worker-authorized resend.
 const getReportForWorker = (reportId, workerId, callback) => {
     const sql = `
         SELECT r.*, u.fullname AS patient_name, u.email AS patient_email
@@ -145,7 +140,6 @@ const getReportForWorker = (reportId, workerId, callback) => {
     });
 };
 
-// Saves a report and its optional accepted follow-up as one atomic operation.
 const createReport = (report, worker, followUp, tokenHash, callback) => {
     db.beginTransaction((transactionErr) => {
         if (transactionErr) return callback(transactionErr);

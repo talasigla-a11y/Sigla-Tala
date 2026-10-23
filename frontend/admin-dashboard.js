@@ -5,7 +5,6 @@ const PATIENT_DASHBOARD_URL = 'patient-dashboard.html';
 const API_BASE_URL = window.SIGLA_TALA_API_URL || 'https://api.siglatala.com';
 const INACTIVITY_TIMEOUT_MS = 10 * 60 * 1000;
 
-// Removes stored credentials and user data when an admin signs out.
 function clearAuthSession() {
   localStorage.removeItem('token');
   localStorage.removeItem('user');
@@ -13,7 +12,6 @@ function clearAuthSession() {
   sessionStorage.removeItem('siglaTalaAuthView');
 }
 
-// Ends the session and redirects to login when authentication is no longer valid.
 function forceLogout(message = 'You were logged out due to inactivity.') {
   clearAuthSession();
 
@@ -27,7 +25,6 @@ function forceLogout(message = 'You were logged out due to inactivity.') {
   }, 500);
 }
 
-// Restarts the inactivity countdown after the administrator interacts with the page.
 function resetInactivityTimer() {
   if (!localStorage.getItem('token')) return;
   clearTimeout(window.siglaInactivityTimer);
@@ -40,7 +37,6 @@ function resetInactivityTimer() {
   document.addEventListener(eventName, resetInactivityTimer, { passive: true });
 });
 
-// Clears stored credentials when the browser leaves or reloads the dashboard.
 window.addEventListener('beforeunload', () => {
   if (localStorage.getItem('token')) {
     clearAuthSession();
@@ -55,7 +51,6 @@ window.addEventListener('pagehide', () => {
 
 window.addEventListener('load', resetInactivityTimer);
 
-// Reads the user profile saved by the login flow.
 function getStoredUser() {
   try {
     return JSON.parse(localStorage.getItem('user') || 'null') || {};
@@ -65,7 +60,6 @@ function getStoredUser() {
   }
 }
 
-// Prevents patients from opening the administrator interface in the browser.
 function ensureAdminAccess() {
   const isDemoMode = new URLSearchParams(window.location.search).get('demo') === 'worker' || new URLSearchParams(window.location.search).get('demo') === 'admin' || localStorage.getItem('demoWorker') === 'true' || localStorage.getItem('demoAdmin') === 'true';
 
@@ -97,9 +91,7 @@ function ensureAdminAccess() {
   return true;
 }
  
-// ===================== Toast helper =====================
 let toastTimer;
-// Gives the administrator feedback after API operations complete.
 function showToast(message, type = 'success') {
   clearTimeout(toastTimer);
   toast.textContent = message;
@@ -109,27 +101,22 @@ function showToast(message, type = 'success') {
   }, 3000);
 }
  
-// ===================== Validation helpers =====================
-// Displays one form validation error next to its input.
 function setError(inputEl, errorEl, message) {
   inputEl.classList.add('invalid');
   errorEl.textContent = message;
 }
  
-// Clears one form validation error.
 function clearError(inputEl, errorEl) {
   inputEl.classList.remove('invalid');
   errorEl.textContent = '';
 }
  
-// Clears all validation errors inside a form.
 function clearErrors(formEl) {
   formEl.querySelectorAll('input, select').forEach((el) => el.classList.remove('invalid'));
   formEl.querySelectorAll('.error-message').forEach((el) => (el.textContent = ''));
 }
  
 document.querySelectorAll('input, select').forEach((el) => {
-  // Removes a field's validation state after the administrator edits it.
   const handler = () => {
     const errorEl = document.getElementById(el.id + 'Error');
     if (errorEl) clearError(el, errorEl);
@@ -138,7 +125,6 @@ document.querySelectorAll('input, select').forEach((el) => {
   el.addEventListener('change', handler);
 });
  
-// ===================== App shell elements =====================
 const userMenu = document.getElementById('userMenu');
 const userMenuTrigger = document.getElementById('userMenuTrigger');
 const userMenuName = document.getElementById('userMenuName');
@@ -183,12 +169,10 @@ const calendarDayDetail = document.getElementById('calendarDayDetail');
 const calendarDayTitle = document.getElementById('calendarDayTitle');
 const calendarDayList = document.getElementById('calendarDayList');
  
-// Creates a compact display name for the dashboard header.
 function firstNameFrom(fullName) {
   return fullName.trim().split(/\s+/)[0] || 'Health Worker';
 }
  
-// Switches the admin dashboard between appointments, announcements, and reports.
 function showView(viewKey) {
   Object.entries(views).forEach(([key, el]) => {
     el.classList.toggle('hidden', key !== viewKey);
@@ -205,21 +189,18 @@ function showView(viewKey) {
   if (viewKey === 'file') loadMedicalReports();
 }
  
-// Opens the administrator profile menu.
 function openUserDropdown() {
   userDropdown.classList.remove('hidden');
   userMenu.classList.add('open');
   userMenuTrigger.setAttribute('aria-expanded', 'true');
 }
  
-// Closes the administrator profile menu.
 function closeUserDropdown() {
   userDropdown.classList.add('hidden');
   userMenu.classList.remove('open');
   userMenuTrigger.setAttribute('aria-expanded', 'false');
 }
  
-// Toggles the administrator menu when its trigger is clicked.
 userMenuTrigger.addEventListener('click', (e) => {
   e.stopPropagation();
   if (userDropdown.classList.contains('hidden')) {
@@ -229,18 +210,15 @@ userMenuTrigger.addEventListener('click', (e) => {
   }
 });
  
-// Closes the administrator menu when a click happens outside it.
 document.addEventListener('click', (e) => {
   if (!userMenu.contains(e.target)) closeUserDropdown();
 });
  
 document.querySelectorAll('.user-dropdown-item[data-view]').forEach((btn) => {
-  // Opens the view selected from the administrator menu.
   btn.addEventListener('click', () => showView(btn.dataset.view));
 });
 
 if (logOutBtn) {
-  // Ends the administrator session and returns to the login page.
   logOutBtn.addEventListener('click', () => {
     clearAuthSession();
 
@@ -253,16 +231,12 @@ if (logOutBtn) {
   });
 }
 
-// ===================== Load appointments from API =====================
-// Fetches appointments from the protected API and renders the admin table.
 async function loadAppointments() {
   const isDemoMode = localStorage.getItem('demoWorker') === 'true' || localStorage.getItem('demoAdmin') === 'true';
   const token = localStorage.getItem('token');
 
-  // In demo mode without a real token, skip API loading
   if (isDemoMode && !token) {
     console.log('Demo mode: skipping API load');
-    // Initialize with empty appointments for demo
     appointments = [];
     return;
   }
@@ -309,8 +283,6 @@ async function loadAppointments() {
   }
 }
 
-// ===================== Update appointment status on API =====================
-// Sends the administrator's appointment decision to the backend for persistence.
 async function updateAppointmentStatusAPI(appointmentId, newStatus) {
   const token = localStorage.getItem('token');
   const isDemoMode = localStorage.getItem('demoWorker') === 'true' || localStorage.getItem('demoAdmin') === 'true';
@@ -351,8 +323,6 @@ async function updateAppointmentStatusAPI(appointmentId, newStatus) {
 }
 
 
-// ===================== Boot straight into the dashboard =====================
-// Loads the initial dashboard data and connects the page event handlers.
 async function initApp() {
 
   const demoUser = getStoredUser();
@@ -387,7 +357,6 @@ if (ensureAdminAccess()) {
   initApp();
 }
 
-// Converts announcement data into dashboard cards and calendar entries.
 function renderAnnouncements() {
   if (!announcements.length) {
     announcementGrid.innerHTML = '<p class="empty-state">No announcements posted yet.</p>';
@@ -409,7 +378,6 @@ function renderAnnouncements() {
     .join('');
 
   announcementGrid.querySelectorAll('.card-delete-btn').forEach((btn) => {
-    // Deletes the selected announcement and refreshes the displayed list.
     btn.addEventListener('click', async () => {
       try {
         const response = await fetch(`${API_BASE_URL}/api/announcements/${btn.dataset.id}`, {
@@ -428,7 +396,6 @@ function renderAnnouncements() {
   });
 }
 
-// Retrieves announcements from the API before rendering them.
 async function loadAnnouncements() {
   try {
     const response = await fetch(`${API_BASE_URL}/api/announcements`);
@@ -447,7 +414,6 @@ async function loadAnnouncements() {
   }
 }
 
-// Loads the current administrator profile into the account form.
 async function loadSavedProfile() {
   const token = localStorage.getItem('token');
   if (!token) return;
@@ -478,13 +444,11 @@ async function loadSavedProfile() {
   }
 }
 
-// Opens the form for creating a new announcement.
 newAnnouncementBtn.addEventListener('click', () => {
   announcementFormPanel.classList.remove('hidden');
   document.getElementById('annTitle').focus();
 });
  
-// Discards the current announcement draft and closes its form.
 cancelAnnouncementBtn.addEventListener('click', () => {
   announcementForm.reset();
   clearErrors(announcementForm);
@@ -493,7 +457,6 @@ cancelAnnouncementBtn.addEventListener('click', () => {
 
 const annCloseBtn = document.getElementById('annCloseBtn');
 if (annCloseBtn) {
-  // Closes the announcement form using its close control.
   annCloseBtn.addEventListener('click', () => {
     announcementForm.reset();
     clearErrors(announcementForm);
@@ -501,7 +464,6 @@ if (annCloseBtn) {
   });
 }
  
-// Validates and saves an announcement submitted by the administrator.
 announcementForm.addEventListener('submit', async (e) => {
   e.preventDefault();
   const titleEl = document.getElementById('annTitle');
@@ -549,20 +511,16 @@ announcementForm.addEventListener('submit', async (e) => {
   }
 });
  
-// ===================== Appointment calendar =====================
 
-// Formats a calendar date as the ISO value used by the appointment data.
 function isoDate(y, m, d) {
   return `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
 }
  
-// Calculates the counts displayed above the administrator calendar.
 function updateCalendarStats() {
   statPending.textContent = appointments.filter((a) => a.status === 'Pending').length;
   statAccepted.textContent = appointments.filter((a) => a.status === 'Accepted').length;
 }
  
-// Builds the monthly calendar and places appointments on their matching dates.
 function renderCalendar() {
   const { year, month } = calendarState;
   calMonthLabel.textContent = `${monthNames[month]} ${year}`;
@@ -606,7 +564,6 @@ function renderCalendar() {
   calendarGrid.innerHTML = cellsHtml;
 
   calendarGrid.querySelectorAll('.calendar-cell:not(.calendar-cell-empty)').forEach((cell) => {
-    // Selects a calendar day and refreshes its appointment details.
     cell.addEventListener('click', () => {
       selectedDateISO = cell.dataset.date;
       renderCalendar();
@@ -618,7 +575,6 @@ function renderCalendar() {
   renderDayDetail(selectedDateISO);
 }
  
-// Shows the appointments scheduled for the selected calendar date.
 function renderDayDetail(dateISO) {
   const dayAppts = appointments.filter((a) => a.dateISO === dateISO);
   const niceDate = new Date(dateISO + 'T00:00:00').toLocaleDateString(undefined, {
@@ -665,7 +621,6 @@ function renderDayDetail(dateISO) {
     .join('');
  
   calendarDayList.querySelectorAll('.btn-accept').forEach((btn) => {
-    // Accepts the selected appointment through the backend API.
     btn.addEventListener('click', async () => {
       const appt = appointments.find((a) => a.id === Number(btn.dataset.id));
       if (appt) {
@@ -701,7 +656,6 @@ function renderDayDetail(dateISO) {
   });
 
   calendarDayList.querySelectorAll('.btn-reject').forEach(( btn) => {
-    // Rejects the selected appointment through the backend API.
     btn.addEventListener('click', async () => {
       const appt = appointments.find((a) => a.id === Number(btn.dataset.id));
       if (appt) {
@@ -719,7 +673,6 @@ function renderDayDetail(dateISO) {
   });
 }
  
-// Moves the calendar back one month and redraws it.
 calPrevBtn.addEventListener('click', () => {
   calendarState.month -= 1;
   if (calendarState.month < 0) {
@@ -729,7 +682,6 @@ calPrevBtn.addEventListener('click', () => {
   renderCalendar();
 });
  
-// Moves the calendar forward one month and redraws it.
 calNextBtn.addEventListener('click', () => {
   calendarState.month += 1;
   if (calendarState.month > 11) {
@@ -739,9 +691,7 @@ calNextBtn.addEventListener('click', () => {
   renderCalendar();
 });
  
-// ===================== Account overview =====================
 const accountForm = document.getElementById('accountForm');
-// Saves the administrator's profile details and job specification.
 accountForm.addEventListener('submit', async (e) => {
   e.preventDefault();
   const fullname = document.getElementById('accFullName').value.trim();
@@ -782,7 +732,6 @@ accountForm.addEventListener('submit', async (e) => {
   }
 });
  
-// ===================== File management =====================
 const tabButtons = document.querySelectorAll('.tab-btn');
 const pendingReportsTab = document.getElementById('pendingReportsTab');
 const medicalReportsTab = document.getElementById('medicalReportsTab');
@@ -794,7 +743,6 @@ const medicalReportForm = document.getElementById('medicalReportForm');
 const reportSearch = document.getElementById('reportSearch');
 let medicalReportEntries = [];
 
-// Escapes report text before inserting it into HTML to prevent markup injection.
 function escapeReportHTML(value) {
   return String(value || '').replace(/[&<>"']/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[character]));
 }
@@ -807,7 +755,6 @@ function normalizeReportSearchText(value) {
     .trim();
 }
 
-// Filters encoded reports by patient name and report details as the worker types.
 function renderMedicalReports() {
   const query = normalizeReportSearchText(reportSearch.value);
   const queryWords = query.split(/\s+/).filter(Boolean);
@@ -837,7 +784,6 @@ function renderMedicalReports() {
   `).join('') : `<p class="empty-state">${medicalReportEntries.length ? 'No reports match your search.' : 'No medical reports encoded yet.'}</p>`;
 }
 
-// Retrieves pending and completed medical reports for the signed-in worker.
 async function loadMedicalReports() {
   try {
     const headers = { Authorization: `Bearer ${localStorage.getItem('token') || ''}` };
@@ -869,7 +815,6 @@ async function loadMedicalReports() {
     medicalReportEntries = reports;
     renderMedicalReports();
 
-    // Loads the selected appointment into the medical report editor.
     pendingReportsList.querySelectorAll('.create-report-btn').forEach((button) => button.addEventListener('click', () => openMedicalReportForm(button.dataset)));
   } catch (error) {
     console.error('MEDICAL REPORT LOAD ERROR:', error);
@@ -877,7 +822,6 @@ async function loadMedicalReports() {
   }
 }
 
-// Opens an attachment through the authenticated API without exposing database file URLs.
 async function openReportAttachment(event) {
   const link = event.target.closest('.report-attachment-link');
   if (!link) return;
@@ -912,7 +856,6 @@ async function openReportAttachment(event) {
   }
 }
 
-// Retries delivery of a previously saved medical report to the patient's registered email.
 async function resendMedicalReportEmail(event) {
   const button = event.target.closest('.resend-report-email-btn');
   if (!button) return;
@@ -933,7 +876,6 @@ async function resendMedicalReportEmail(event) {
   }
 }
 
-// Opens the report editor with the selected patient's appointment information.
 function openMedicalReportForm(data) {
   medicalReportForm.reset();
   const now = new Date();
@@ -952,7 +894,6 @@ function openMedicalReportForm(data) {
   medicalReportFormPanel.classList.remove('hidden');
 }
 
-// Submits the completed medical report to the backend.
 async function saveMedicalReport(event) {
   event.preventDefault();
   try {
@@ -997,11 +938,8 @@ async function saveMedicalReport(event) {
   }
 }
 
-// Saves the report currently entered in the report form.
 medicalReportForm.addEventListener('submit', saveMedicalReport);
-// Closes the report editor without submitting its contents.
 document.getElementById('cancelMedicalReportBtn').addEventListener('click', () => medicalReportFormPanel.classList.add('hidden'));
-// Closes the report editor from its close control.
 document.getElementById('closeMedicalReportBtn').addEventListener('click', () => medicalReportFormPanel.classList.add('hidden'));
 document.getElementById('reportFollowUp').addEventListener('change', (event) => {
   const fields = document.getElementById('reportFollowUpFields');
@@ -1015,7 +953,6 @@ pendingReportsList.addEventListener('click', openReportAttachment);
 medicalReportsList.addEventListener('click', openReportAttachment);
 medicalReportsList.addEventListener('click', resendMedicalReportEmail);
  
-// Switches between the pending appointments and completed report lists.
 tabButtons.forEach((btn) => {
   btn.addEventListener('click', () => {
     tabButtons.forEach((b) => b.classList.toggle('active', b === btn));

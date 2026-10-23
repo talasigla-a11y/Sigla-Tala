@@ -1,15 +1,10 @@
-// ===============================
-// SIGLA TALA - AUTHENTICATION JS
-// ===============================
 
-// Uses a configurable API URL so the same frontend can run locally or on the production domain.
 const API_BASE_URL = window.SIGLA_TALA_API_URL || "https://api.siglatala.com";
 
 const API_URL = `${API_BASE_URL}/api/auth`;
 const WORKER_DASHBOARD_URL = "admin-dashboard.html";
 const PATIENT_DASHBOARD_URL = "patient-dashboard.html";
 
-// Sends workers and patients to their appropriate dashboard after login.
 function getDashboardUrlForUser(user) {
 
     const role =
@@ -23,9 +18,6 @@ function getDashboardUrlForUser(user) {
 
 }
 
-// ===============================
-// ELEMENTS
-// ===============================
 
 const signinCard = document.getElementById("signinCard");
 const signupCard = document.getElementById("signupCard");
@@ -59,7 +51,6 @@ const AUTH_VIEW_KEY = "siglaTalaAuthView";
 let toastTimer;
 
 
-// Switches between sign-in, sign-up, OTP, and reset-password panels.
 function showAuthView(viewName, shouldRecordHistory = true) {
 
     const nextView =
@@ -106,7 +97,6 @@ function showAuthView(viewName, shouldRecordHistory = true) {
 }
 
 
-// Restores the correct sign-in, sign-up, OTP, or reset panel after browser navigation.
 window.addEventListener("popstate", function () {
 
     const stateView =
@@ -136,9 +126,6 @@ window.addEventListener("popstate", function () {
 });
 
 
-// ===============================
-// OTP FLOW
-// ===============================
 
 let activeOtpFlow = null;
 
@@ -258,11 +245,7 @@ if (otpForm) {
     });
 }
 
-// ===============================
-// TOAST MESSAGE
-// ===============================
 
-// Displays a short success or error message without interrupting the form flow.
 function showToast(message, type = "success") {
 
     if (!toast) return;
@@ -278,18 +261,13 @@ function showToast(message, type = "success") {
 }
 
 
-// ===============================
-// VALIDATION HELPERS
-// ===============================
 
-// Performs the browser-side email check before sending a request to the API.
 function isValidEmail(email) {
 
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
 }
 
-// Matches the backend password policy before a signup or reset request is sent.
 function isStrongPassword(password) {
 
     return /^(?=.*[A-Z])(?=.*\d)(?=.*[_*&%]).{8,}$/.test(password);
@@ -297,7 +275,6 @@ function isStrongPassword(password) {
 }
 
 
-// Shows a field-level validation message and marks the input as invalid.
 function setError(input, error, message) {
 
     if (input) {
@@ -311,7 +288,6 @@ function setError(input, error, message) {
 }
 
 
-// Removes the validation state from one input field.
 function clearError(input, error) {
 
     if (input) {
@@ -325,7 +301,6 @@ function clearError(input, error) {
 }
 
 
-// Resets all validation messages before a new submission is processed.
 function clearFormErrors(form) {
 
     if (!form) return;
@@ -341,13 +316,9 @@ function clearFormErrors(form) {
 }
 
 
-// ===============================
-// SWITCH LOGIN / SIGNUP
-// ===============================
 
 if (showSignup) {
 
-    // Opens the sign-up panel when the user selects the registration link.
     showSignup.addEventListener("click", function (event) {
 
         event.preventDefault();
@@ -360,7 +331,6 @@ if (showSignup) {
 
 if (showSignin) {
 
-    // Returns to the sign-in panel when the user selects the login link.
     showSignin.addEventListener("click", function (event) {
 
         event.preventDefault();
@@ -371,13 +341,9 @@ if (showSignin) {
 }
 
 
-// ===============================
-// CLEAR ERRORS WHEN TYPING
-// ===============================
 
 document.querySelectorAll("input, select").forEach((input) => {
 
-    // Clears a field's error message as soon as its value changes.
     input.addEventListener("input", function () {
 
         const error = document.getElementById(
@@ -390,7 +356,6 @@ document.querySelectorAll("input, select").forEach((input) => {
 
     });
 
-    // Also clears validation feedback when a selection changes.
     input.addEventListener("change", function () {
 
         const error = document.getElementById(
@@ -406,13 +371,9 @@ document.querySelectorAll("input, select").forEach((input) => {
 });
 
 
-// ===============================
-// SIGN UP
-// ===============================
 
 if (signupForm) {
 
-    // Validates registration details, creates the account, then verifies its OTP.
     signupForm.addEventListener("submit", async function (event) {
 
         event.preventDefault();
@@ -452,7 +413,6 @@ if (signupForm) {
         let valid = true;
 
 
-        // Full name
         if (!fullName.value.trim()) {
 
             setError(
@@ -465,7 +425,6 @@ if (signupForm) {
         }
 
 
-        // Age
         if (!age.value) {
 
             setError(
@@ -492,7 +451,6 @@ if (signupForm) {
         }
 
 
-        // Gender
         if (!gender.value) {
 
             setError(
@@ -506,7 +464,6 @@ if (signupForm) {
         }
 
 
-        // Email
         if (!email.value.trim()) {
 
             setError(
@@ -530,7 +487,6 @@ if (signupForm) {
         }
 
 
-        // Password
         if (!password.value) {
 
             setError(
@@ -655,13 +611,9 @@ if (signupForm) {
 }
 
 
-// ===============================
-// SIGN IN
-// ===============================
 
 if (signinForm) {
 
-    // Checks credentials, verifies the login OTP, and opens the user's dashboard.
     signinForm.addEventListener("submit", async function (event) {
 
         event.preventDefault();
@@ -684,7 +636,6 @@ if (signinForm) {
         let valid = true;
 
 
-        // Email validation
         if (!email.value.trim()) {
 
             setError(
@@ -708,7 +659,6 @@ if (signinForm) {
         }
 
 
-        // Password validation
         if (!password.value) {
 
             setError(
@@ -736,9 +686,6 @@ if (signinForm) {
 
         try {
 
-            // ===============================
-            // LOGIN REQUEST
-            // ===============================
 
             const controller = new AbortController();
             const requestTimeout = setTimeout(() => controller.abort(), 20000);
@@ -825,13 +772,9 @@ if (signinForm) {
 }
 
 
-// ===============================
-// FORGOT PASSWORD
-// ===============================
 
 if (forgotPasswordLink) {
 
-    // Requests a reset OTP and guides the user through a form-based password recovery flow.
     forgotPasswordLink.addEventListener(
         "click",
         async function (event) {
@@ -1001,13 +944,9 @@ if (resetForm) {
 }
 
 
-// ===============================
-// CHECK IF ALREADY LOGGED IN
-// ===============================
 
 window.addEventListener(
     "DOMContentLoaded",
-    // Selects the initial auth panel and redirects an existing signed-in user.
     function () {
 
         const token =

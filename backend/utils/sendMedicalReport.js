@@ -7,7 +7,6 @@ const escapeHtml = (value) => String(value || "")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#039;");
 
-// Sends a generated medical report and optional follow-up schedule to the patient.
 module.exports = async (email, patientName, report, followUp = null) => {
     const followUpSection = followUp
         ? `

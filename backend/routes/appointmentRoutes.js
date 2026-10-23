@@ -9,7 +9,6 @@ const multer = require("multer");
 const upload = multer({
     storage: multer.memoryStorage(),
     limits: { fileSize: 10 * 1024 * 1024, files: 5 },
-    // Restricts uploaded appointment attachments to supported document and image types.
     fileFilter: (req, file, cb) => {
         const allowedTypes = [
             "application/pdf",
@@ -28,14 +27,11 @@ const upload = multer({
     }
 });
 
-// Validates the private token from an emailed appointment receipt.
 router.post(
     "/receipt/verify",
     appointmentController.verifyAppointmentReceipt
 );
 
-// Creates an appointment after authenticating the patient and processing optional attachments.
-// Create appointment
 router.post(
     "/",
     verifyToken,
@@ -43,23 +39,18 @@ router.post(
     appointmentController.createAppointment
 );
 
-// Shows the patient which worker is currently assigned to the selected service.
 router.get(
     "/provider",
     verifyToken,
     appointmentController.getProviderForAppointmentType
 );
 
-// Returns only the appointments belonging to the authenticated patient.
-// Get logged-in user's appointments
 router.get(
     "/my-appointments",
     verifyToken,
     appointmentController.getMyAppointments
 );
 
-// Admin endpoints require both a valid JWT and the admin role.
-// Get all appointments (admin only)
 router.get(
     "/admin/all-appointments",
     verifyToken,
@@ -67,7 +58,6 @@ router.get(
     appointmentController.getAllAppointments
 );
 
-// Update appointment status (admin only)
 router.put(
     "/admin/update-status",
     verifyToken,
