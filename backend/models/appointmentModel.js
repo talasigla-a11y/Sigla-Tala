@@ -1,6 +1,5 @@
 const db = require("../database/db");
 
-// Adds optional attachment columns for databases created before file uploads existed.
 const addFileColumns = (callback) => {
     db.query("ALTER TABLE appointments ADD COLUMN file_name VARCHAR(255) NULL, ADD COLUMN file_data MEDIUMBLOB NULL", (err) => {
         if (err && err.code !== "ER_DUP_FIELDNAME") return callback(err);
@@ -8,7 +7,6 @@ const addFileColumns = (callback) => {
     });
 };
 
-// Adds an optional reason for appointments booked under the "Other" type.
 const ensureOtherReasonColumn = (callback) => {
     db.query("ALTER TABLE appointments ADD COLUMN other_reason VARCHAR(500) NULL", (err) => {
         if (err && err.code !== "ER_DUP_FIELDNAME") return callback(err);
@@ -16,7 +14,6 @@ const ensureOtherReasonColumn = (callback) => {
     });
 };
 
-// Stores which worker accepted an appointment, separately from its initial assignment.
 const ensureAcceptedByWorkerColumn = (callback) => {
     const addColumns = [
         "ALTER TABLE appointments ADD COLUMN accepted_by_worker_id INT NULL",
@@ -48,7 +45,6 @@ const ensureAcceptedByWorkerColumn = (callback) => {
     addNextColumn(0);
 };
 
-// Creates a separate attachment row for each uploaded appointment file.
 const ensureAttachmentTable = (callback) => {
     const sql = `
         CREATE TABLE IF NOT EXISTS appointment_attachments (
@@ -82,7 +78,6 @@ const ensureAttachmentTable = (callback) => {
     });
 };
 
-// Adds assignment columns and links existing appointments to configured workers.
 const ensureJobSpecificationColumn = (callback) => {
     db.query("ALTER TABLE appointments ADD COLUMN job_specification VARCHAR(100) NULL", (alterErr) => {
         if (alterErr && alterErr.code !== "ER_DUP_FIELDNAME") return callback(alterErr);
@@ -132,7 +127,6 @@ const ensureJobSpecificationColumn = (callback) => {
     });
 };
 
-// Finds the first worker configured for an appointment specialty.
 const getAdminByJobSpecification = (jobSpecification, callback) => {
     const sql = `
         SELECT id, fullname, job_specification
@@ -146,7 +140,6 @@ const getAdminByJobSpecification = (jobSpecification, callback) => {
     db.query(sql, [jobSpecification], callback);
 };
 
-// Assigns existing unassigned appointments to the first worker for a specialty.
 const assignUnassignedAppointmentsByJobSpecification = (jobSpecification, callback) => {
     const sql = `
         UPDATE appointments
@@ -165,7 +158,6 @@ const assignUnassignedAppointmentsByJobSpecification = (jobSpecification, callba
         db.query(sql, [jobSpecification, jobSpecification], callback);
 };
 
-// Checks whether a given date and half-hour slot is already booked.
 const getAppointmentByDateAndTime = (appointmentDate, timePreference, callback) => {
     const sql = `
         SELECT id, user_id, appointment_date, time_preference
@@ -178,8 +170,6 @@ const getAppointmentByDateAndTime = (appointmentDate, timePreference, callback) 
     db.query(sql, [appointmentDate, timePreference], callback);
 };
 
-// ================= CREATE APPOINTMENT =================
-// Inserts an appointment and all uploaded files as one transaction.
 const createAppointment = (appointment, callback) => {
     const sql = `
         INSERT INTO appointments
@@ -254,7 +244,6 @@ const createAppointment = (appointment, callback) => {
     });
 };
 
-// Adds attachment names to appointment records without returning binary file data.
 const addAttachmentNames = (appointments, callback) => {
     if (!appointments.length) {
         return callback(null, appointments);
@@ -301,8 +290,6 @@ const addAttachmentNames = (appointments, callback) => {
 };
 
 
-// ================= GET USER APPOINTMENTS =================
-// Queries appointments belonging to one patient.
 const getAppointmentsByUserId = (userId, callback) => {
     const sql = `
         SELECT
@@ -334,8 +321,6 @@ const getAppointmentsByUserId = (userId, callback) => {
 };
 
 
-// ================= GET ALL APPOINTMENTS (ADMIN) =================
-// Joins appointments with patient details for the admin dashboard.
 const getAllAppointments = (adminId, callback) => {
     const sql = `
         SELECT 
@@ -370,7 +355,6 @@ const getAllAppointments = (adminId, callback) => {
     });
 };
 
-// Marks an appointment accepted and returns the private data required to email its receipt.
 const prepareAcceptedAppointmentReceipt = (appointmentId, workerId, tokenHash, callback) => {
     const updateSql = `
         UPDATE appointments
@@ -424,7 +408,6 @@ const prepareAcceptedAppointmentReceipt = (appointmentId, workerId, tokenHash, c
     });
 };
 
-// Verifies an emailed receipt token and returns only its matching accepted appointment.
 const getAppointmentReceiptByToken = (appointmentId, tokenHash, callback) => {
     const sql = `
         SELECT
@@ -454,7 +437,6 @@ const getAppointmentReceiptByToken = (appointmentId, tokenHash, callback) => {
     });
 };
 
-// Marks delivery only for the currently issued appointment receipt token.
 const markReceiptEmailSent = (appointmentId, tokenHash, callback) => {
     const sql = `
         UPDATE appointments
@@ -468,8 +450,6 @@ const markReceiptEmailSent = (appointmentId, tokenHash, callback) => {
 };
 
 
-// ================= UPDATE APPOINTMENT STATUS =================
-// Persists the admin's status decision for an appointment.
 const updateAppointmentStatus = (appointmentId, status, adminId, callback) => {
     const sql = `
         UPDATE appointments
