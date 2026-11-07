@@ -140,6 +140,21 @@ const getAdminByJobSpecification = (jobSpecification, callback) => {
     db.query(sql, [jobSpecification], callback);
 };
 
+const getScheduledAdminByJobAndDate = (jobSpecification, appointmentDate, callback) => {
+    const sql = `
+        SELECT u.id, u.fullname, u.job_specification
+        FROM worker_schedules s
+        INNER JOIN users u ON u.id = s.worker_id
+        WHERE s.schedule_date = ?
+          AND LOWER(TRIM(u.role)) IN ('worker', 'admin')
+          AND LOWER(TRIM(u.job_specification)) = LOWER(TRIM(?))
+        ORDER BY s.start_time, u.fullname
+        LIMIT 1
+    `;
+
+    db.query(sql, [appointmentDate, jobSpecification], callback);
+};
+
 const assignUnassignedAppointmentsByJobSpecification = (jobSpecification, callback) => {
     const sql = `
         UPDATE appointments
@@ -364,6 +379,12 @@ const prepareAcceptedAppointmentReceipt = (appointmentId, workerId, tokenHash, c
             receipt_email_sent_at = NULL
         WHERE id = ?
           AND assigned_admin_id = ?
+          AND EXISTS (
+              SELECT 1
+              FROM worker_schedules schedule
+              WHERE schedule.worker_id = appointments.assigned_admin_id
+                AND schedule.schedule_date = appointments.appointment_date
+          )
           AND (
               status = 'Pending'
               OR (
@@ -457,7 +478,14 @@ const updateAppointmentStatus = (appointmentId, status, adminId, callback) => {
             accepted_by_worker_id = CASE WHEN ? = 'Accepted' THEN ? ELSE NULL END,
             receipt_token_hash = CASE WHEN ? = 'Accepted' THEN receipt_token_hash ELSE NULL END,
             receipt_email_sent_at = CASE WHEN ? = 'Accepted' THEN receipt_email_sent_at ELSE NULL END
-        WHERE id = ? AND assigned_admin_id = ?
+        WHERE id = ?
+          AND assigned_admin_id = ?
+          AND EXISTS (
+              SELECT 1
+              FROM worker_schedules schedule
+              WHERE schedule.worker_id = appointments.assigned_admin_id
+                AND schedule.schedule_date = appointments.appointment_date
+          )
     `;
 
     db.query(
@@ -475,6 +503,7 @@ module.exports = {
     ensureAttachmentTable,
     ensureJobSpecificationColumn,
     getAdminByJobSpecification,
+    getScheduledAdminByJobAndDate,
     assignUnassignedAppointmentsByJobSpecification,
     getAppointmentByDateAndTime,
     createAppointment,

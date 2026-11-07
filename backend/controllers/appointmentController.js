@@ -19,6 +19,7 @@ const getJobSpecification = (appointmentType) =>
 
 const getProviderForAppointmentType = (req, res) => {
     const appointmentType = String(req.query.appointment_type || "").trim().toLowerCase();
+    const appointmentDate = String(req.query.appointment_date || "").trim();
     const job_specification = jobSpecificationByAppointmentType[appointmentType];
 
     if (!job_specification) {
@@ -28,7 +29,14 @@ const getProviderForAppointmentType = (req, res) => {
         });
     }
 
-    appointmentModel.getAdminByJobSpecification(job_specification, (err, providers) => {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(appointmentDate)) {
+        return res.status(400).json({
+            success: false,
+            message: "Select an appointment date to see the scheduled worker."
+        });
+    }
+
+    appointmentModel.getScheduledAdminByJobAndDate(job_specification, appointmentDate, (err, providers) => {
         if (err) {
             console.error("FIND APPOINTMENT PROVIDER ERROR:", err);
             return res.status(500).json({
@@ -40,6 +48,7 @@ const getProviderForAppointmentType = (req, res) => {
         return res.status(200).json({
             success: true,
             job_specification,
+            appointment_date: appointmentDate,
             provider: providers.length ? providers[0] : null
         });
     });
@@ -87,7 +96,7 @@ const createAppointment = (req, res) => {
         }));
 
         const continueBooking = () => {
-            appointmentModel.getAdminByJobSpecification(job_specification, (adminErr, admins) => {
+            appointmentModel.getScheduledAdminByJobAndDate(job_specification, appointment_date, (adminErr, admins) => {
                 if (adminErr) {
                     console.error("FIND APPOINTMENT ADMIN ERROR:", adminErr);
                     return res.status(500).json({
@@ -99,7 +108,7 @@ const createAppointment = (req, res) => {
                 if (!admins.length) {
                     return res.status(409).json({
                         success: false,
-                        message: `No worker is configured for ${job_specification} appointments. Ask a worker to set their Job Specification.`
+                        message: `No ${job_specification} worker is scheduled on ${appointment_date}. Please choose another date.`
                     });
                 }
 

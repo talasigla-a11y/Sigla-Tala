@@ -754,6 +754,11 @@ async function updateAppointmentTypeDetails() {
         otherAppointmentReasonError.textContent = "";
     }
 
+    if (!appointmentDate || !appointmentDate.value) {
+        appointmentProvider.textContent = "Assigned worker details are available after selecting an appointment date.";
+        return;
+    }
+
     appointmentProvider.textContent = `Assigned to: Loading ${selectedOption.dataset.jobSpecification || "worker"}...`;
 
     const token = localStorage.getItem("token");
@@ -764,7 +769,7 @@ async function updateAppointmentTypeDetails() {
 
     try {
         const response = await fetch(
-            `${API_BASE_URL}/api/appointments/provider?appointment_type=${encodeURIComponent(appointmentTypeName)}`,
+            `${API_BASE_URL}/api/appointments/provider?appointment_type=${encodeURIComponent(appointmentTypeName)}&appointment_date=${encodeURIComponent(appointmentDate.value)}`,
             {
                 method: "GET",
                 headers: { Authorization: `Bearer ${token}` }
@@ -803,6 +808,10 @@ const appointmentTime =
     document.getElementById(
         "apptTime"
     );
+
+if (appointmentDate) {
+    appointmentDate.addEventListener("change", updateAppointmentTypeDetails);
+}
 
 const appointmentFile =
     document.getElementById(
