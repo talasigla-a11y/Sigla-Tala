@@ -45,15 +45,38 @@ function emptyRow(colspan, message = "No records found.") {
     return `<tr><td colspan="${colspan}">${message}</td></tr>`;
 }
 
+function formatDateOnly(value) {
+    const datePart = String(value || "").slice(0, 10);
+    const match = datePart.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!match) return datePart;
+
+    const [, year, month, day] = match;
+    return new Intl.DateTimeFormat(undefined, {
+        year: "numeric",
+        month: "long",
+        day: "numeric"
+    }).format(new Date(Number(year), Number(month) - 1, Number(day)));
+}
+
+function formatDateTime(value) {
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? String(value || "") : date.toLocaleString();
+}
+
 function renderBars(elementId, records, labelKey) {
     const element = document.getElementById(elementId);
     if (!records.length) { element.innerHTML = "<p class='field-hint'>No data for this date range.</p>"; return; }
     const valueKey = labelKey === "category" ? "patients" : "total";
     const max = Math.max(...records.map((record) => Number(record[valueKey] || 0)), 1);
-    element.innerHTML = records.map((record) => `
-        <div class="bar-row"><span class="bar-label">${escapeHtml(record[labelKey] || "Unspecified")}</span>
-        <span class="bar-track"><span class="bar-fill" style="width:${(Number(record[valueKey] || 0) / max) * 100}%"></span></span>
-        <strong>${Number(record[valueKey] || 0)}</strong></div>`).join("");
+    element.innerHTML = records.map((record) => {
+        const label = labelKey === "date" ? formatDateOnly(record[labelKey]) : (record[labelKey] || "Unspecified");
+        return `
+        <div class="bar-column">
+          <strong class="bar-value">${Number(record[valueKey] || 0)}</strong>
+          <span class="bar-track"><span class="bar-fill" style="height:${(Number(record[valueKey] || 0) / max) * 100}%"></span></span>
+          <span class="bar-label">${escapeHtml(label)}</span>
+        </div>`;
+    }).join("");
 }
 
 function escapeHtml(value) {
@@ -85,7 +108,7 @@ function renderReport(report) {
         : emptyRow(4);
     document.getElementById("categoryStatus").textContent = `${categories.length} categor${categories.length === 1 ? "y" : "ies"}`;
     document.getElementById("reportRows").innerHTML = report.appointments.length
-        ? report.appointments.map((appointment) => `<tr><td>${escapeHtml(appointment.date)}</td><td>${escapeHtml(appointment.patient_name)}</td><td>${escapeHtml(appointment.category)}</td><td>${escapeHtml(appointment.worker_name || "Unassigned")}</td><td>${statusMarkup(appointment.status)}</td></tr>`).join("")
+        ? report.appointments.map((appointment) => `<tr><td>${escapeHtml(formatDateOnly(appointment.date))}</td><td>${escapeHtml(appointment.patient_name)}</td><td>${escapeHtml(appointment.category)}</td><td>${escapeHtml(appointment.worker_name || "Unassigned")}</td><td>${statusMarkup(appointment.status)}</td></tr>`).join("")
         : emptyRow(5);
     document.getElementById("reportStatus").textContent = `${report.appointments.length} appointment record(s)`;
 }
@@ -107,7 +130,7 @@ async function loadAssignments() {
     try {
         const data = await request(`/report${rangeQuery()}`);
         const rows = data.appointments || [];
-        document.getElementById("assignmentRows").innerHTML = rows.length ? rows.map((appointment) => `<tr><td>${escapeHtml(appointment.date)}</td><td>${escapeHtml(appointment.patient_name)}</td><td>${escapeHtml(appointment.category)}</td><td>${escapeHtml(appointment.worker_name || "Unassigned")}</td><td><select class="assignment-select" data-id="${appointment.id}"><option value="">Select worker</option>${workers.map((worker) => `<option value="${worker.id}" ${worker.fullname === appointment.worker_name ? "selected" : ""}>${escapeHtml(worker.fullname)}</option>`).join("")}</select></td></tr>`).join("") : emptyRow(5);
+        document.getElementById("assignmentRows").innerHTML = rows.length ? rows.map((appointment) => `<tr><td>${escapeHtml(formatDateOnly(appointment.date))}</td><td>${escapeHtml(appointment.patient_name)}</td><td>${escapeHtml(appointment.category)}</td><td>${escapeHtml(appointment.worker_name || "Unassigned")}</td><td><select class="assignment-select" data-id="${appointment.id}"><option value="">Select worker</option>${workers.map((worker) => `<option value="${worker.id}" ${worker.fullname === appointment.worker_name ? "selected" : ""}>${escapeHtml(worker.fullname)}</option>`).join("")}</select></td></tr>`).join("") : emptyRow(5);
         document.querySelectorAll(".assignment-select").forEach((select) => select.addEventListener("change", assignAppointment));
     } catch (error) { showToast(error.message, "error"); }
 }
@@ -140,16 +163,7 @@ function populateSpecializations() {
 }
 
 function formatScheduleDate(value) {
-    const datePart = String(value || "").slice(0, 10);
-    const match = datePart.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-    if (!match) return datePart;
-
-    const [, year, month, day] = match;
-    return new Intl.DateTimeFormat(undefined, {
-        year: "numeric",
-        month: "long",
-        day: "numeric"
-    }).format(new Date(Number(year), Number(month) - 1, Number(day)));
+    return formatDateOnly(value);
 }
 
 function renderSchedules() {
@@ -219,7 +233,7 @@ function validateScheduleTime() {
 async function loadActivity() {
     try {
         const data = await request(`/activity-logs${rangeQuery()}`);
-        document.getElementById("activityRows").innerHTML = data.logs.length ? data.logs.map((log) => `<tr><td>${escapeHtml(new Date(log.created_at).toLocaleString())}</td><td>${escapeHtml(log.actor_name || "System")}</td><td>${escapeHtml(log.action)}</td><td>${escapeHtml(log.entity_type)} #${escapeHtml(log.entity_id || "—")}</td><td>${escapeHtml(log.details || "—")}</td></tr>`).join("") : emptyRow(5);
+        document.getElementById("activityRows").innerHTML = data.logs.length ? data.logs.map((log) => `<tr><td>${escapeHtml(formatDateTime(log.created_at))}</td><td>${escapeHtml(log.actor_name || "System")}</td><td>${escapeHtml(log.action)}</td><td>${escapeHtml(log.entity_type)} #${escapeHtml(log.entity_id || "—")}</td><td>${escapeHtml(log.details || "—")}</td></tr>`).join("") : emptyRow(5);
     } catch (error) { showToast(error.message, "error"); }
 }
 
