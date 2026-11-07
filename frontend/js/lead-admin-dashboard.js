@@ -46,11 +46,12 @@ function emptyRow(colspan, message = "No records found.") {
 function renderBars(elementId, records, labelKey) {
     const element = document.getElementById(elementId);
     if (!records.length) { element.innerHTML = "<p class='field-hint'>No data for this date range.</p>"; return; }
-    const max = Math.max(...records.map((record) => Number(record.total)), 1);
+    const valueKey = labelKey === "category" ? "patients" : "total";
+    const max = Math.max(...records.map((record) => Number(record[valueKey] || 0)), 1);
     element.innerHTML = records.map((record) => `
-        <div class="bar-row"><span>${escapeHtml(record[labelKey] || "Unspecified")}</span>
-        <span class="bar-track"><span class="bar-fill" style="width:${(Number(record.total) / max) * 100}%"></span></span>
-        <strong>${Number(record.total)}</strong></div>`).join("");
+        <div class="bar-row"><span class="bar-label">${escapeHtml(record[labelKey] || "Unspecified")}</span>
+        <span class="bar-track"><span class="bar-fill" style="width:${(Number(record[valueKey] || 0) / max) * 100}%"></span></span>
+        <strong>${Number(record[valueKey] || 0)}</strong></div>`).join("");
 }
 
 function escapeHtml(value) {
@@ -71,6 +72,16 @@ function renderReport(report) {
     document.getElementById("completedAppointments").textContent = Number(summary.completed || 0);
     renderBars("dailyChart", report.daily || [], "date");
     renderBars("categoryChart", report.categories || [], "category");
+    const categories = report.categories || [];
+    const totalPatients = categories.reduce((sum, category) => sum + Number(category.patients || 0), 0);
+    document.getElementById("categoryRows").innerHTML = categories.length
+        ? categories.map((category) => {
+            const patients = Number(category.patients || 0);
+            const share = totalPatients ? `${((patients / totalPatients) * 100).toFixed(1)}%` : "0%";
+            return `<tr><td>${escapeHtml(category.category)}</td><td><strong>${patients}</strong></td><td>${Number(category.total || 0)}</td><td>${share}</td></tr>`;
+        }).join("")
+        : emptyRow(4);
+    document.getElementById("categoryStatus").textContent = `${categories.length} categor${categories.length === 1 ? "y" : "ies"}`;
     document.getElementById("reportRows").innerHTML = report.appointments.length
         ? report.appointments.map((appointment) => `<tr><td>${escapeHtml(appointment.date)}</td><td>${escapeHtml(appointment.patient_name)}</td><td>${escapeHtml(appointment.category)}</td><td>${escapeHtml(appointment.worker_name || "Unassigned")}</td><td>${statusMarkup(appointment.status)}</td></tr>`).join("")
         : emptyRow(5);

@@ -56,11 +56,14 @@ const getReport = (from, to, callback) => {
         ORDER BY appointment_date
     `;
     const categorySql = `
-        SELECT appointment_type AS category, COUNT(*) AS total
+        SELECT
+            COALESCE(NULLIF(TRIM(appointment_type), ''), 'Unspecified') AS category,
+            COUNT(*) AS total,
+            COUNT(DISTINCT user_id) AS patients
         FROM appointments
         WHERE appointment_date BETWEEN ? AND ?
         GROUP BY appointment_type
-        ORDER BY total DESC, category
+        ORDER BY patients DESC, total DESC, category
     `;
     const appointmentsSql = `
         SELECT a.id, a.appointment_date AS date, a.time_preference, a.appointment_type AS category,

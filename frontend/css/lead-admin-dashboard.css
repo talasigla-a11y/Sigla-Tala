@@ -16,8 +16,13 @@
 .metric-card strong { display: block; font-size: 30px; margin-top: 8px; }
 .lead-chart-grid { grid-template-columns: repeat(2, 1fr); }
 .lead-card h2 { font-size: 17px; margin: 0 0 18px; }
+.lead-card h2 { margin-bottom: 6px; }
+.chart-badge { background: #e1f4e9; border-radius: 20px; color: #147243; font-size: 11px; font-weight: 700; padding: 6px 10px; white-space: nowrap; }
+.category-report-card .field-hint { margin: 0 0 14px; }
+.category-table-card { margin-bottom: 16px; }
 .bar-chart { display: flex; flex-direction: column; gap: 12px; min-height: 160px; }
-.bar-row { align-items: center; display: grid; gap: 10px; grid-template-columns: minmax(100px, 1fr) 3fr 32px; font-size: 12px; }
+.bar-row { align-items: center; display: grid; gap: 10px; grid-template-columns: minmax(120px, 1fr) 3fr 32px; font-size: 12px; }
+.bar-label { overflow-wrap: anywhere; }
 .bar-track { background: #e8eee9; border-radius: 20px; height: 12px; overflow: hidden; }
 .bar-fill { background: var(--green); border-radius: inherit; height: 100%; }
 .table-wrap { overflow-x: auto; }
