@@ -5,6 +5,7 @@
 .page-description { color: var(--text-muted); margin: 0 0 22px; }
 .lead-admin-header-actions { align-items: center; display: flex; gap: 14px; color: #fff; }
 .report-filters { align-items: end; display: grid; gap: 10px; grid-template-columns: auto repeat(3, minmax(130px, 1fr)) auto; max-width: 860px; }
+.appointment-report-heading { margin-bottom: 18px; }
 .filter-group, .schedule-form label { color: var(--text-muted); display: flex; flex-direction: column; font-size: 12px; gap: 4px; }
 .filter-group input, .filter-group select, .schedule-form input, .schedule-form select { border: 1px solid var(--border); border-radius: 6px; min-height: 38px; min-width: 0; padding: 7px 9px; }
 .date-range-group { align-items: end; display: flex; gap: 7px; }

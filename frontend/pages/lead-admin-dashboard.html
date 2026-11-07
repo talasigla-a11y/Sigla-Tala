@@ -25,20 +25,6 @@
       <h1>Lead Admin Dashboard</h1>
       <p class="page-description">Monitor patient appointments, worker schedules, assignments, and staff activity.</p>
     </div>
-    <div class="report-filters">
-      <div class="filter-group date-range-group">
-        <label for="fromDate">From<input id="fromDate" type="date"></label>
-        <span class="filter-separator">to</span>
-        <label for="toDate">To<input id="toDate" type="date"></label>
-      </div>
-      <label class="filter-group" for="statusFilter">Status<select id="statusFilter"><option value="">All statuses</option><option>Pending</option><option>Accepted</option><option>Rejected</option><option>Completed</option><option>Cancelled</option></select></label>
-      <label class="filter-group" for="workerFilter">Worker<select id="workerFilter"><option value="">All workers</option></select></label>
-      <label class="filter-group" for="categoryFilter">Category<select id="categoryFilter"><option value="">All categories</option></select></label>
-      <div class="filter-actions">
-        <button class="btn-primary btn-compact" id="refreshBtn" type="button">Apply</button>
-        <button class="btn-secondary btn-compact" id="exportBtn" type="button">Export Excel</button>
-      </div>
-    </div>
   </div>
 
   <div class="lead-admin-tabs" role="tablist">
@@ -69,7 +55,22 @@
       <div class="card-heading"><h2>Category totals</h2><span id="categoryStatus" class="field-hint"></span></div>
       <div class="table-wrap"><table><thead><tr><th>Appointment category</th><th>Patients</th><th>Appointments</th><th>Share</th></tr></thead><tbody id="categoryRows"></tbody></table></div>
     </div>
-    <div class="lead-card"><div class="card-heading"><div><h2>Appointment report</h2><span id="reportStatus" class="field-hint"></span></div><input id="reportSearch" class="report-search" type="search" placeholder="Search patient, worker, or category..."></div>
+    <div class="lead-card appointment-report-card">
+      <div class="card-heading appointment-report-heading"><div><h2>Appointment report</h2><span id="reportStatus" class="field-hint"></span></div><input id="reportSearch" class="report-search" type="search" placeholder="Search patient, worker, or category..."></div>
+      <div class="report-filters">
+        <div class="filter-group date-range-group">
+          <label for="fromDate">From<input id="fromDate" type="date"></label>
+          <span class="filter-separator">to</span>
+          <label for="toDate">To<input id="toDate" type="date"></label>
+        </div>
+        <label class="filter-group" for="statusFilter">Status<select id="statusFilter"><option value="">All statuses</option><option>Pending</option><option>Accepted</option><option>Rejected</option><option>Completed</option><option>Cancelled</option></select></label>
+        <label class="filter-group" for="workerFilter">Worker<select id="workerFilter"><option value="">All workers</option></select></label>
+        <label class="filter-group" for="categoryFilter">Category<select id="categoryFilter"><option value="">All categories</option></select></label>
+        <div class="filter-actions">
+          <button class="btn-primary btn-compact" id="refreshBtn" type="button">Apply</button>
+          <button class="btn-secondary btn-compact" id="exportBtn" type="button">Export Excel</button>
+        </div>
+      </div>
       <div class="table-wrap"><table><thead><tr><th>Date</th><th>Patient</th><th>Category</th><th>Worker</th><th>Status</th></tr></thead><tbody id="reportRows"></tbody></table></div>
       <div class="pagination-row"><span id="paginationStatus" class="field-hint"></span><div><button class="btn-secondary btn-compact" id="previousPageBtn" type="button">Previous</button><button class="btn-secondary btn-compact" id="nextPageBtn" type="button">Next</button></div></div>
     </div>
