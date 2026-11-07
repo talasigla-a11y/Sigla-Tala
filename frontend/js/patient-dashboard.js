@@ -1,6 +1,6 @@
 
 const API_BASE_URL = window.SIGLA_TALA_API_URL || "https://api.siglatala.com";
-const LOGIN_URL = "login.html";
+const LOGIN_URL = "../pages/login.html";
 const INACTIVITY_TIMEOUT_MS = 10 * 60 * 1000;
 
 function clearAuthSession() {
@@ -542,7 +542,7 @@ async function checkSession() {
             ) {
 
                 window.location.href =
-                    "admin-dashboard.html";
+                    "../pages/admin-dashboard.html";
 
                 return false;
 

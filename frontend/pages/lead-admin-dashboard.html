@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sigla Tala — Lead Admin Dashboard</title>
+<link rel="stylesheet" href="../css/styles.css">
+<link rel="stylesheet" href="../css/lead-admin-dashboard.css">
+</head>
+<body>
+<header class="app-header">
+  <div class="app-header-inner">
+    <div class="brand"><div class="logo logo-sm">S</div><span class="brand-name">Sigla Tala</span></div>
+    <div class="lead-admin-header-actions">
+      <span id="leadAdminName">Lead Admin</span>
+      <button class="btn-secondary btn-compact" id="logoutBtn" type="button">Log out</button>
+    </div>
+  </div>
+</header>
+
+<main class="lead-admin-page">
+  <div class="lead-admin-title-row">
+    <div>
+      <p class="eyebrow">Operations overview</p>
+      <h1>Lead Admin Dashboard</h1>
+      <p class="page-description">Monitor patient appointments, worker schedules, assignments, and staff activity.</p>
+    </div>
+    <div class="date-filter">
+      <label for="fromDate">From</label><input id="fromDate" type="date">
+      <label for="toDate">To</label><input id="toDate" type="date">
+      <button class="btn-primary btn-compact" id="refreshBtn" type="button">Apply</button>
+      <button class="btn-secondary btn-compact" id="exportBtn" type="button">Export CSV</button>
+    </div>
+  </div>
+
+  <div class="lead-admin-tabs" role="tablist">
+    <button class="lead-tab active" data-panel="reportsPanel" role="tab">Reports</button>
+    <button class="lead-tab" data-panel="assignmentsPanel" role="tab">Assignments</button>
+    <button class="lead-tab" data-panel="schedulesPanel" role="tab">Worker schedules</button>
+    <button class="lead-tab" data-panel="activityPanel" role="tab">Activity log</button>
+  </div>
+
+  <section id="reportsPanel" class="lead-panel">
+    <div class="metric-grid">
+      <article class="metric-card"><span>Total appointments</span><strong id="totalAppointments">0</strong></article>
+      <article class="metric-card"><span>Unique patients</span><strong id="uniquePatients">0</strong></article>
+      <article class="metric-card"><span>Pending</span><strong id="pendingAppointments">0</strong></article>
+      <article class="metric-card"><span>Completed</span><strong id="completedAppointments">0</strong></article>
+    </div>
+    <div class="lead-chart-grid">
+      <article class="lead-card"><h2>Appointments by day</h2><div id="dailyChart" class="bar-chart" aria-label="Appointments by day"></div></article>
+      <article class="lead-card"><h2>Appointment categories</h2><div id="categoryChart" class="bar-chart" aria-label="Appointment categories"></div></article>
+    </div>
+    <div class="lead-card"><div class="card-heading"><h2>Appointment report</h2><span id="reportStatus" class="field-hint"></span></div>
+      <div class="table-wrap"><table><thead><tr><th>Date</th><th>Patient</th><th>Category</th><th>Worker</th><th>Status</th></tr></thead><tbody id="reportRows"></tbody></table></div>
+    </div>
+  </section>
+
+  <section id="assignmentsPanel" class="lead-panel hidden">
+    <div class="lead-card"><div class="card-heading"><h2>Assign appointments to workers</h2><button class="btn-secondary btn-compact" id="reloadAssignmentsBtn" type="button">Refresh</button></div>
+      <div class="table-wrap"><table><thead><tr><th>Date</th><th>Patient</th><th>Category</th><th>Current worker</th><th>Assign to</th></tr></thead><tbody id="assignmentRows"></tbody></table></div>
+    </div>
+  </section>
+
+  <section id="schedulesPanel" class="lead-panel hidden">
+    <div class="lead-card"><h2>Set worker schedule</h2>
+      <form id="scheduleForm" class="schedule-form">
+        <label>Worker<select id="scheduleWorker" required></select></label>
+        <label>Date<input id="scheduleDate" type="date" required></label>
+        <label>Start<input id="scheduleStart" type="time" required></label>
+        <label>End<input id="scheduleEnd" type="time" required></label>
+        <label class="schedule-notes">Notes<input id="scheduleNotes" maxlength="500"></label>
+        <button class="btn-primary btn-compact" type="submit">Save schedule</button>
+      </form>
+    </div>
+    <div class="lead-card"><h2>Scheduled workers</h2><div class="table-wrap"><table><thead><tr><th>Date</th><th>Worker</th><th>Specialization</th><th>Hours</th><th>Notes</th></tr></thead><tbody id="scheduleRows"></tbody></table></div></div>
+  </section>
+
+  <section id="activityPanel" class="lead-panel hidden">
+    <div class="lead-card"><div class="card-heading"><h2>Worker activity log</h2><button class="btn-secondary btn-compact" id="reloadActivityBtn" type="button">Refresh</button></div>
+      <div class="table-wrap"><table><thead><tr><th>Time</th><th>Actor</th><th>Action</th><th>Entity</th><th>Details</th></tr></thead><tbody id="activityRows"></tbody></table></div>
+    </div>
+  </section>
+</main>
+<div class="toast" id="toast" role="status"></div>
+<script src="../js/lead-admin-dashboard.js"></script>
+</body>
+</html>

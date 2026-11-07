@@ -12,9 +12,11 @@ const appointmentRoutes = require("./routes/appointmentRoutes");
 const announcementRoutes = require("./routes/announcementRoutes");
 const announcementModel = require("./models/announcementModel");
 const medicalReportRoutes = require("./routes/medicalReportRoutes");
+const leadAdminRoutes = require("./routes/leadAdminRoutes");
 const medicalReportModel = require("./models/medicalReportModel");
 const appointmentModel = require("./models/appointmentModel");
 const userModel = require("./models/userModel");
+const leadAdminModel = require("./models/leadAdminModel");
 
 const verifyToken = require("./middleware/authMiddleware");
 
@@ -96,6 +98,7 @@ app.use("/api/appointments", appointmentRoutes);
 
 app.use("/api/announcements", announcementRoutes);
 app.use("/api/medical-reports", medicalReportRoutes);
+app.use("/api/lead-admin", leadAdminRoutes);
 
 
 
@@ -144,8 +147,11 @@ userModel.ensureSchema((userErr) => {
                             if (reportErr) console.error("MEDICAL REPORT TABLE ERROR:", reportErr);
                             announcementModel.createTable((err) => {
                                 if (err) console.error("ANNOUNCEMENTS TABLE ERROR:", err);
-                                app.listen(port, () => {
-                                    console.log(`✅ Server running on port ${port}`);
+                                leadAdminModel.createTables((leadAdminErr) => {
+                                    if (leadAdminErr) console.error("LEAD ADMIN TABLE ERROR:", leadAdminErr);
+                                    app.listen(port, () => {
+                                        console.log(`✅ Server running on port ${port}`);
+                                    });
                                 });
                             });
                         });

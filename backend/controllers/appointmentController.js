@@ -1,4 +1,5 @@
 const appointmentModel = require("../models/appointmentModel");
+const leadAdminModel = require("../models/leadAdminModel");
 const crypto = require("crypto");
 const { sendAppointmentReceipt, formatReceiptDate } = require("../utils/appointmentReceipt");
 
@@ -343,6 +344,10 @@ const updateAppointmentStatus = (req, res) => {
                         });
                     }
 
+                    leadAdminModel.logActivity(req.user.id, "appointment_status_updated", "appointment", id, "Status changed to Accepted", (logErr) => {
+                        if (logErr) console.error("ACTIVITY LOG ERROR:", logErr);
+                    });
+
                     if (!receipt.patient_email) {
                         return res.status(200).json({
                             success: true,
@@ -402,6 +407,10 @@ const updateAppointmentStatus = (req, res) => {
                         message: "Appointment not found or not assigned to this admin."
                     });
                 }
+
+                leadAdminModel.logActivity(req.user.id, "appointment_status_updated", "appointment", Number(appointmentId), `Status changed to ${status}`, (logErr) => {
+                    if (logErr) console.error("ACTIVITY LOG ERROR:", logErr);
+                });
 
                 return res.status(200).json({
                     success: true,

@@ -2,8 +2,9 @@
 const API_BASE_URL = window.SIGLA_TALA_API_URL || "https://api.siglatala.com";
 
 const API_URL = `${API_BASE_URL}/api/auth`;
-const WORKER_DASHBOARD_URL = "admin-dashboard.html";
-const PATIENT_DASHBOARD_URL = "patient-dashboard.html";
+const WORKER_DASHBOARD_URL = "../pages/admin-dashboard.html";
+const LEAD_ADMIN_DASHBOARD_URL = "../pages/lead-admin-dashboard.html";
+const PATIENT_DASHBOARD_URL = "../pages/patient-dashboard.html";
 
 function getDashboardUrlForUser(user) {
 
@@ -12,7 +13,9 @@ function getDashboardUrlForUser(user) {
             String(user.role).toLowerCase() :
             "patient";
 
-    return role === "worker" || role === "admin" ?
+    return role === "lead-admin" ?
+        LEAD_ADMIN_DASHBOARD_URL :
+        role === "worker" || role === "admin" ?
         WORKER_DASHBOARD_URL :
         PATIENT_DASHBOARD_URL;
 

@@ -53,7 +53,7 @@ const ensureSchema = (callback) => {
         const runNext = () => {
             if (index >= checks.length) {
                 db.query(
-                    "UPDATE users SET job_specification = NULL WHERE role IS NULL OR LOWER(TRIM(role)) NOT IN ('patient', 'worker', 'admin')",
+                    "UPDATE users SET job_specification = NULL WHERE role IS NULL OR LOWER(TRIM(role)) NOT IN ('patient', 'worker', 'admin', 'lead-admin')",
                     callback
                 );
                 return;

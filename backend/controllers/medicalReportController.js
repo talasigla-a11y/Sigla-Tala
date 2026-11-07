@@ -1,4 +1,5 @@
 const medicalReportModel = require("../models/medicalReportModel");
+const leadAdminModel = require("../models/leadAdminModel");
 const userModel = require("../models/userModel");
 const appointmentModel = require("../models/appointmentModel");
 const crypto = require("crypto");
@@ -198,6 +199,9 @@ const createReport = async (req, res) => {
             }
 
             const partialEmailFailure = !emailSent || receiptEmailSent === false;
+            leadAdminModel.logActivity(req.user.id, "medical_report_created", "medical_report", result.reportId, "Medical report saved", (logErr) => {
+                if (logErr) console.error("ACTIVITY LOG ERROR:", logErr);
+            });
             return res.status(201).json({
                 success: true,
                 reportId: result.reportId,

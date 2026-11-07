@@ -1,1 +1,6 @@
+/login.html /pages/login.html 301
+/admin-dashboard.html /pages/admin-dashboard.html 301
+/patient-dashboard.html /pages/patient-dashboard.html 301
+/lead-admin-dashboard.html /pages/lead-admin-dashboard.html 301
+/appointment-receipt.html /pages/appointment-receipt.html 301
 /*    /index.html   200

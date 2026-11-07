@@ -25,7 +25,7 @@ const createReceiptUrl = (appointmentId, token) => {
         throw new Error("FRONTEND_URL must use HTTPS, except for localhost development.");
     }
 
-    const receiptUrl = new URL("/appointment-receipt.html", baseUrl);
+    const receiptUrl = new URL("/pages/appointment-receipt.html", baseUrl);
     receiptUrl.hash = new URLSearchParams({
         appointment_id: String(appointmentId),
         token
