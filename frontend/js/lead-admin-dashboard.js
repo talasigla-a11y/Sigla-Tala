@@ -66,6 +66,14 @@ function normalizeTime(value) {
     return String(value || "").slice(0, 5);
 }
 
+function normalizeDate(value) {
+    const text = String(value || "");
+    const isoMatch = text.match(/^(\d{4}-\d{2}-\d{2})/);
+    if (isoMatch) return isoMatch[1];
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? text : date.toISOString().slice(0, 10);
+}
+
 function formatDateTime(value) {
     const date = new Date(value);
     return Number.isNaN(date.getTime()) ? String(value || "") : date.toLocaleString();
@@ -262,11 +270,11 @@ function renderSchedules() {
     const date = document.getElementById("scheduleDateFilter").value;
     const filtered = schedules.filter((schedule) => {
         const workerMatch = String(schedule.worker_name || "").toLowerCase().includes(query) || String(schedule.job_specification || "").toLowerCase().includes(query);
-        const scheduleDate = String(schedule.schedule_date || "").slice(0, 10);
+        const scheduleDate = normalizeDate(schedule.schedule_date);
         const startTime = normalizeTime(schedule.start_time);
         const endTime = normalizeTime(schedule.end_time);
         return workerMatch &&
-            (!specialization || schedule.job_specification === specialization) &&
+            (!specialization || String(schedule.job_specification || "").toLowerCase() === specialization.toLowerCase()) &&
             (!date || scheduleDate === date) &&
             startTime >= MORNING_START &&
             endTime <= MORNING_END &&
@@ -454,7 +462,10 @@ document.getElementById("scheduleForm").addEventListener("submit", async (event)
         showToast("Worker schedule saved.");
         resetScheduleForm();
         await loadSchedules();
-    } catch (error) { showToast(error.message, "error"); }
+    } catch (error) {
+        showToast(error.message, "error");
+        await loadSchedules();
+    }
 });
 
 loadWorkers();
