@@ -28,6 +28,9 @@
     <div class="date-filter">
       <label for="fromDate">From</label><input id="fromDate" type="date">
       <label for="toDate">To</label><input id="toDate" type="date">
+      <label for="statusFilter">Status</label><select id="statusFilter"><option value="">All statuses</option><option>Pending</option><option>Accepted</option><option>Rejected</option><option>Completed</option><option>Cancelled</option></select>
+      <label for="workerFilter">Worker</label><select id="workerFilter"><option value="">All workers</option></select>
+      <label for="categoryFilter">Category</label><select id="categoryFilter"><option value="">All categories</option></select>
       <button class="btn-primary btn-compact" id="refreshBtn" type="button">Apply</button>
       <button class="btn-secondary btn-compact" id="exportBtn" type="button">Export Excel</button>
     </div>
@@ -44,8 +47,8 @@
     <div class="metric-grid">
       <article class="metric-card"><span>Total appointments</span><strong id="totalAppointments">0</strong></article>
       <article class="metric-card"><span>Unique patients</span><strong id="uniquePatients">0</strong></article>
-      <article class="metric-card"><span>Pending</span><strong id="pendingAppointments">0</strong></article>
-      <article class="metric-card"><span>Completed</span><strong id="completedAppointments">0</strong></article>
+      <article class="metric-card"><span>Accepted</span><strong id="acceptedAppointments">0</strong></article>
+      <article class="metric-card"><span>Rejected</span><strong id="rejectedAppointments">0</strong></article>
     </div>
     <div class="lead-chart-grid">
       <article class="lead-card"><h2>Appointments by day</h2><div id="dailyChart" class="bar-chart" aria-label="Appointments by day"></div></article>
@@ -61,8 +64,9 @@
       <div class="card-heading"><h2>Category totals</h2><span id="categoryStatus" class="field-hint"></span></div>
       <div class="table-wrap"><table><thead><tr><th>Appointment category</th><th>Patients</th><th>Appointments</th><th>Share</th></tr></thead><tbody id="categoryRows"></tbody></table></div>
     </div>
-    <div class="lead-card"><div class="card-heading"><h2>Appointment report</h2><span id="reportStatus" class="field-hint"></span></div>
+    <div class="lead-card"><div class="card-heading"><div><h2>Appointment report</h2><span id="reportStatus" class="field-hint"></span></div><input id="reportSearch" class="report-search" type="search" placeholder="Search patient, worker, or category..."></div>
       <div class="table-wrap"><table><thead><tr><th>Date</th><th>Patient</th><th>Category</th><th>Worker</th><th>Status</th></tr></thead><tbody id="reportRows"></tbody></table></div>
+      <div class="pagination-row"><span id="paginationStatus" class="field-hint"></span><div><button class="btn-secondary btn-compact" id="previousPageBtn" type="button">Previous</button><button class="btn-secondary btn-compact" id="nextPageBtn" type="button">Next</button></div></div>
     </div>
   </section>
 
@@ -92,6 +96,11 @@
     </div>
   </section>
 </main>
+<aside class="detail-drawer hidden" id="appointmentDrawer" aria-hidden="true">
+  <div class="drawer-header"><div><p class="eyebrow">Appointment details</p><h2 id="drawerTitle">Patient history</h2></div><button class="drawer-close" id="drawerCloseBtn" type="button" aria-label="Close details">×</button></div>
+  <div id="drawerContent" class="drawer-content"></div>
+</aside>
+<div class="drawer-backdrop hidden" id="drawerBackdrop"></div>
 <div class="toast" id="toast" role="status"></div>
 <script src="../js/lead-admin-dashboard.js"></script>
 </body>

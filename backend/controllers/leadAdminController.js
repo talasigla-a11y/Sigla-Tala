@@ -21,6 +21,21 @@ const getReport = (req, res) => {
     });
 };
 
+const getAppointmentDetails = (req, res) => {
+    const appointmentId = Number(req.params.appointmentId);
+    if (!Number.isSafeInteger(appointmentId) || appointmentId < 1) {
+        return res.status(400).json({ success: false, message: "A valid appointment is required." });
+    }
+    leadAdminModel.getAppointmentDetails(appointmentId, (err, details) => {
+        if (err) {
+            console.error("LEAD ADMIN APPOINTMENT DETAILS ERROR:", err);
+            return res.status(500).json({ success: false, message: "Unable to load appointment details." });
+        }
+        if (!details) return res.status(404).json({ success: false, message: "Appointment not found." });
+        res.json({ success: true, ...details });
+    });
+};
+
 const getWorkers = (req, res) => {
     leadAdminModel.getWorkers((err, workers) => {
         if (err) return res.status(500).json({ success: false, message: "Unable to load workers." });
@@ -95,4 +110,4 @@ const getActivityLogs = (req, res) => {
     });
 };
 
-module.exports = { getReport, getWorkers, assignAppointment, getSchedules, saveSchedule, deleteSchedule, getActivityLogs };
+module.exports = { getReport, getAppointmentDetails, getWorkers, assignAppointment, getSchedules, saveSchedule, deleteSchedule, getActivityLogs };

@@ -95,6 +95,43 @@ const getReport = (from, to, callback) => {
     });
 };
 
+const getAppointmentDetails = (appointmentId, callback) => {
+    const appointmentSql = `
+        SELECT a.id, a.user_id, a.appointment_date AS date, a.time_preference,
+               a.appointment_type AS category, a.other_reason, a.job_specification,
+               a.status, a.created_at, p.fullname AS patient_name, p.email AS patient_email,
+               p.age AS patient_age, p.gender AS patient_gender,
+               w.fullname AS worker_name, w.email AS worker_email,
+               r.diagnostic, r.notes, r.recorded_date, r.doctor_name
+        FROM appointments a
+        LEFT JOIN users p ON p.id = a.user_id
+        LEFT JOIN users w ON w.id = a.assigned_admin_id
+        LEFT JOIN medical_reports r ON r.appointment_id = a.id
+        WHERE a.id = ?
+        LIMIT 1
+    `;
+    db.query(appointmentSql, [appointmentId], (appointmentErr, appointmentRows) => {
+        if (appointmentErr) return callback(appointmentErr);
+        if (!appointmentRows.length) return callback(null, null);
+
+        const appointment = appointmentRows[0];
+        const historySql = `
+            SELECT a.id, a.appointment_date AS date, a.time_preference,
+                   a.appointment_type AS category, a.status,
+                   w.fullname AS worker_name, r.diagnostic, r.notes
+            FROM appointments a
+            LEFT JOIN users w ON w.id = a.assigned_admin_id
+            LEFT JOIN medical_reports r ON r.appointment_id = a.id
+            WHERE a.user_id = ?
+            ORDER BY a.appointment_date DESC, a.created_at DESC
+        `;
+        db.query(historySql, [appointment.user_id], (historyErr, history) => {
+            if (historyErr) return callback(historyErr);
+            callback(null, { appointment, history });
+        });
+    });
+};
+
 const getWorkers = (callback) => {
     db.query(
         "SELECT id, fullname, email, job_specification FROM users WHERE LOWER(role) IN ('worker', 'admin') ORDER BY fullname",
@@ -225,6 +262,7 @@ const getActivityLogs = (from, to, callback) => {
 module.exports = {
     createTables,
     getReport,
+    getAppointmentDetails,
     getWorkers,
     getWorkerById,
     assignAppointment,

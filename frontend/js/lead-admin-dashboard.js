@@ -7,6 +7,8 @@ let reportData = { appointments: [] };
 let workers = [];
 let schedules = [];
 let editingScheduleId = null;
+let reportPage = 1;
+const reportPageSize = 10;
 let toastTimer;
 
 if (!token || role !== "lead-admin") {
@@ -68,15 +70,19 @@ function renderBars(elementId, records, labelKey) {
     if (!records.length) { element.innerHTML = "<p class='field-hint'>No data for this date range.</p>"; return; }
     const valueKey = labelKey === "category" ? "patients" : "total";
     const max = Math.max(...records.map((record) => Number(record[valueKey] || 0)), 1);
+    const scaleStep = Math.max(1, Math.ceil(max / 4));
+    const scaleMax = scaleStep * 4;
+    const scale = [scaleMax, scaleStep * 3, scaleStep * 2, scaleStep, 0];
     element.innerHTML = records.map((record) => {
         const label = labelKey === "date" ? formatDateOnly(record[labelKey]) : (record[labelKey] || "Unspecified");
         return `
-        <div class="bar-column">
+        <div class="bar-column" title="${escapeHtml(`${label}: ${Number(record[valueKey] || 0)}`)}">
           <strong class="bar-value">${Number(record[valueKey] || 0)}</strong>
-          <span class="bar-track"><span class="bar-fill" style="height:${(Number(record[valueKey] || 0) / max) * 100}%"></span></span>
+          <span class="bar-track"><span class="bar-fill" style="height:${(Number(record[valueKey] || 0) / scaleMax) * 100}%"></span></span>
           <span class="bar-label">${escapeHtml(label)}</span>
         </div>`;
     }).join("");
+    element.innerHTML = `<div class="chart-scale" aria-hidden="true">${scale.map((value) => `<span>${value}</span>`).join("")}</div><div class="chart-columns">${element.innerHTML}</div>`;
 }
 
 function escapeHtml(value) {
@@ -93,8 +99,9 @@ function renderReport(report) {
     const summary = report.summary || {};
     document.getElementById("totalAppointments").textContent = Number(summary.total_appointments || 0);
     document.getElementById("uniquePatients").textContent = Number(summary.unique_patients || 0);
-    document.getElementById("pendingAppointments").textContent = Number(summary.pending || 0);
-    document.getElementById("completedAppointments").textContent = Number(summary.completed || 0);
+    document.getElementById("acceptedAppointments").textContent = Number(summary.accepted || 0);
+    document.getElementById("rejectedAppointments").textContent = Number(summary.rejected || 0);
+    populateReportFilters();
     renderBars("dailyChart", report.daily || [], "date");
     renderBars("categoryChart", report.categories || [], "category");
     const categories = report.categories || [];
@@ -107,10 +114,87 @@ function renderReport(report) {
         }).join("")
         : emptyRow(4);
     document.getElementById("categoryStatus").textContent = `${categories.length} categor${categories.length === 1 ? "y" : "ies"}`;
-    document.getElementById("reportRows").innerHTML = report.appointments.length
-        ? report.appointments.map((appointment) => `<tr><td>${escapeHtml(formatDateOnly(appointment.date))}</td><td>${escapeHtml(appointment.patient_name)}</td><td>${escapeHtml(appointment.category)}</td><td>${escapeHtml(appointment.worker_name || "Unassigned")}</td><td>${statusMarkup(appointment.status)}</td></tr>`).join("")
-        : emptyRow(5);
-    document.getElementById("reportStatus").textContent = `${report.appointments.length} appointment record(s)`;
+    reportPage = 1;
+    renderReportTable();
+}
+
+function populateReportFilters() {
+    const worker = document.getElementById("workerFilter");
+    const category = document.getElementById("categoryFilter");
+    const workerValue = worker.value;
+    const categoryValue = category.value;
+    const workersInReport = [...new Set(reportData.appointments.map((item) => item.worker_name).filter(Boolean))].sort();
+    const categoriesInReport = [...new Set(reportData.appointments.map((item) => item.category).filter(Boolean))].sort();
+    worker.innerHTML = `<option value="">All workers</option>${workersInReport.map((item) => `<option>${escapeHtml(item)}</option>`).join("")}`;
+    category.innerHTML = `<option value="">All categories</option>${categoriesInReport.map((item) => `<option>${escapeHtml(item)}</option>`).join("")}`;
+    worker.value = workersInReport.includes(workerValue) ? workerValue : "";
+    category.value = categoriesInReport.includes(categoryValue) ? categoryValue : "";
+}
+
+function filteredReportAppointments() {
+    const status = document.getElementById("statusFilter").value;
+    const worker = document.getElementById("workerFilter").value;
+    const category = document.getElementById("categoryFilter").value;
+    const search = document.getElementById("reportSearch").value.trim().toLowerCase();
+    return reportData.appointments.filter((item) => {
+        const searchable = `${item.patient_name || ""} ${item.worker_name || ""} ${item.category || ""}`.toLowerCase();
+        return (!status || item.status === status) &&
+            (!worker || item.worker_name === worker) &&
+            (!category || item.category === category) &&
+            (!search || searchable.includes(search));
+    });
+}
+
+function renderReportTable() {
+    const filtered = filteredReportAppointments();
+    const totalPages = Math.max(1, Math.ceil(filtered.length / reportPageSize));
+    reportPage = Math.min(reportPage, totalPages);
+    const start = (reportPage - 1) * reportPageSize;
+    const visible = filtered.slice(start, start + reportPageSize);
+    document.getElementById("reportRows").innerHTML = visible.length
+        ? visible.map((appointment) => `<tr class="clickable-report-row" tabindex="0" data-id="${appointment.id}"><td>${escapeHtml(formatDateOnly(appointment.date))}</td><td>${escapeHtml(appointment.patient_name)}</td><td>${escapeHtml(appointment.category)}</td><td>${escapeHtml(appointment.worker_name || "Unassigned")}</td><td>${statusMarkup(appointment.status)}</td></tr>`).join("")
+        : emptyRow(5, "No appointments match the current filters.");
+    document.querySelectorAll(".clickable-report-row").forEach((row) => {
+        row.addEventListener("click", () => openAppointmentDetails(Number(row.dataset.id)));
+        row.addEventListener("keydown", (event) => { if (event.key === "Enter" || event.key === " ") openAppointmentDetails(Number(row.dataset.id)); });
+    });
+    const from = filtered.length ? start + 1 : 0;
+    const to = Math.min(start + reportPageSize, filtered.length);
+    document.getElementById("reportStatus").textContent = `${filtered.length} appointment record(s)`;
+    document.getElementById("paginationStatus").textContent = `Showing ${from}-${to} of ${filtered.length} records`;
+    document.getElementById("previousPageBtn").disabled = reportPage <= 1;
+    document.getElementById("nextPageBtn").disabled = reportPage >= totalPages;
+}
+
+async function openAppointmentDetails(appointmentId) {
+    try {
+        const details = await request(`/appointments/${appointmentId}`);
+        const appointment = details.appointment;
+        document.getElementById("drawerTitle").textContent = appointment.patient_name || "Patient history";
+        document.getElementById("drawerContent").innerHTML = `
+          <section class="drawer-section"><h3>Appointment</h3><dl class="detail-list">
+            <dt>Date</dt><dd>${escapeHtml(formatDateOnly(appointment.date))}</dd>
+            <dt>Time</dt><dd>${escapeHtml(appointment.time_preference || "—")}</dd>
+            <dt>Category</dt><dd>${escapeHtml(appointment.category || "—")}</dd>
+            <dt>Status</dt><dd>${statusMarkup(appointment.status)}</dd>
+            <dt>Assigned worker</dt><dd>${escapeHtml(appointment.worker_name || "Unassigned")}</dd>
+          </dl></section>
+          <section class="drawer-section"><h3>Patient profile</h3><dl class="detail-list">
+            <dt>Email</dt><dd>${escapeHtml(appointment.patient_email || "—")}</dd>
+            <dt>Age</dt><dd>${escapeHtml(appointment.patient_age || "—")}</dd>
+            <dt>Gender</dt><dd>${escapeHtml(appointment.patient_gender || "—")}</dd>
+          </dl></section>
+          <section class="drawer-section"><h3>Patient history</h3>${details.history.length ? `<div class="history-list">${details.history.map((item) => `<article class="history-item"><strong>${escapeHtml(formatDateOnly(item.date))} · ${escapeHtml(item.category || "Appointment")}</strong><span>${statusMarkup(item.status)} · ${escapeHtml(item.worker_name || "Unassigned")}</span>${item.diagnostic ? `<p><b>Diagnosis:</b> ${escapeHtml(item.diagnostic)}</p>` : ""}${item.notes ? `<p>${escapeHtml(item.notes)}</p>` : ""}</article>`).join("")}</div>` : "<p class='field-hint'>No previous history found.</p>"}</section>`;
+        document.getElementById("appointmentDrawer").classList.remove("hidden");
+        document.getElementById("drawerBackdrop").classList.remove("hidden");
+        document.getElementById("appointmentDrawer").setAttribute("aria-hidden", "false");
+    } catch (error) { showToast(error.message, "error"); }
+}
+
+function closeAppointmentDetails() {
+    document.getElementById("appointmentDrawer").classList.add("hidden");
+    document.getElementById("drawerBackdrop").classList.add("hidden");
+    document.getElementById("appointmentDrawer").setAttribute("aria-hidden", "true");
 }
 
 async function loadReport() {
@@ -280,6 +364,12 @@ function exportExcel() {
 }
 
 document.getElementById("refreshBtn").addEventListener("click", async () => { await loadReport(); await loadSchedules(); await loadActivity(); });
+["statusFilter", "workerFilter", "categoryFilter"].forEach((id) => document.getElementById(id).addEventListener("change", () => { reportPage = 1; renderReportTable(); }));
+document.getElementById("reportSearch").addEventListener("input", () => { reportPage = 1; renderReportTable(); });
+document.getElementById("previousPageBtn").addEventListener("click", () => { reportPage -= 1; renderReportTable(); });
+document.getElementById("nextPageBtn").addEventListener("click", () => { reportPage += 1; renderReportTable(); });
+document.getElementById("drawerCloseBtn").addEventListener("click", closeAppointmentDetails);
+document.getElementById("drawerBackdrop").addEventListener("click", closeAppointmentDetails);
 document.getElementById("exportBtn").addEventListener("click", exportExcel);
 document.getElementById("reloadAssignmentsBtn").addEventListener("click", loadAssignments);
 document.getElementById("reloadActivityBtn").addEventListener("click", loadActivity);

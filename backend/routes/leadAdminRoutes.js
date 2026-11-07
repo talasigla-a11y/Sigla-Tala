@@ -6,6 +6,7 @@ const controller = require("../controllers/leadAdminController");
 
 router.use(verifyToken, verifyLeadAdmin);
 router.get("/report", controller.getReport);
+router.get("/appointments/:appointmentId", controller.getAppointmentDetails);
 router.get("/workers", controller.getWorkers);
 router.put("/appointments/assign", controller.assignAppointment);
 router.get("/schedules", controller.getSchedules);
