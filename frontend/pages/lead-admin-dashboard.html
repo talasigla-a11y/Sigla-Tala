@@ -25,14 +25,19 @@
       <h1>Lead Admin Dashboard</h1>
       <p class="page-description">Monitor patient appointments, worker schedules, assignments, and staff activity.</p>
     </div>
-    <div class="date-filter">
-      <label for="fromDate">From</label><input id="fromDate" type="date">
-      <label for="toDate">To</label><input id="toDate" type="date">
-      <label for="statusFilter">Status</label><select id="statusFilter"><option value="">All statuses</option><option>Pending</option><option>Accepted</option><option>Rejected</option><option>Completed</option><option>Cancelled</option></select>
-      <label for="workerFilter">Worker</label><select id="workerFilter"><option value="">All workers</option></select>
-      <label for="categoryFilter">Category</label><select id="categoryFilter"><option value="">All categories</option></select>
-      <button class="btn-primary btn-compact" id="refreshBtn" type="button">Apply</button>
-      <button class="btn-secondary btn-compact" id="exportBtn" type="button">Export Excel</button>
+    <div class="report-filters">
+      <div class="filter-group date-range-group">
+        <label for="fromDate">From<input id="fromDate" type="date"></label>
+        <span class="filter-separator">to</span>
+        <label for="toDate">To<input id="toDate" type="date"></label>
+      </div>
+      <label class="filter-group" for="statusFilter">Status<select id="statusFilter"><option value="">All statuses</option><option>Pending</option><option>Accepted</option><option>Rejected</option><option>Completed</option><option>Cancelled</option></select></label>
+      <label class="filter-group" for="workerFilter">Worker<select id="workerFilter"><option value="">All workers</option></select></label>
+      <label class="filter-group" for="categoryFilter">Category<select id="categoryFilter"><option value="">All categories</option></select></label>
+      <div class="filter-actions">
+        <button class="btn-primary btn-compact" id="refreshBtn" type="button">Apply</button>
+        <button class="btn-secondary btn-compact" id="exportBtn" type="button">Export Excel</button>
+      </div>
     </div>
   </div>
 
