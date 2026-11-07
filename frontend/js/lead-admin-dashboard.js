@@ -62,6 +62,10 @@ function formatDateOnly(value) {
     }).format(new Date(Number(year), Number(month) - 1, Number(day)));
 }
 
+function normalizeTime(value) {
+    return String(value || "").slice(0, 5);
+}
+
 function formatDateTime(value) {
     const date = new Date(value);
     return Number.isNaN(date.getTime()) ? String(value || "") : date.toLocaleString();
@@ -259,15 +263,17 @@ function renderSchedules() {
     const filtered = schedules.filter((schedule) => {
         const workerMatch = String(schedule.worker_name || "").toLowerCase().includes(query) || String(schedule.job_specification || "").toLowerCase().includes(query);
         const scheduleDate = String(schedule.schedule_date || "").slice(0, 10);
+        const startTime = normalizeTime(schedule.start_time);
+        const endTime = normalizeTime(schedule.end_time);
         return workerMatch &&
             (!specialization || schedule.job_specification === specialization) &&
             (!date || scheduleDate === date) &&
-            schedule.start_time >= MORNING_START &&
-            schedule.end_time <= MORNING_END &&
-            schedule.start_time < schedule.end_time;
+            startTime >= MORNING_START &&
+            endTime <= MORNING_END &&
+            startTime < endTime;
     });
     document.getElementById("scheduleRows").innerHTML = filtered.length ? filtered.map((schedule) => {
-        const hours = `${escapeHtml(schedule.start_time)}–${escapeHtml(schedule.end_time)}`;
+        const hours = `${escapeHtml(normalizeTime(schedule.start_time))}–${escapeHtml(normalizeTime(schedule.end_time))}`;
         return `<tr><td>${escapeHtml(formatScheduleDate(schedule.schedule_date))}</td><td>${escapeHtml(schedule.worker_name)}</td><td>${escapeHtml(schedule.job_specification || "—")}</td><td>${hours}</td><td>${escapeHtml(schedule.notes || "—")}</td><td class="schedule-actions"><button type="button" class="btn-secondary btn-compact edit-schedule" data-id="${schedule.id}">Edit</button><button type="button" class="btn-danger btn-compact delete-schedule" data-id="${schedule.id}">Delete</button></td></tr>`;
     }).join("") : emptyRow(6, "No schedules match the current filters.");
     document.querySelectorAll(".edit-schedule").forEach((button) => button.addEventListener("click", () => beginScheduleEdit(Number(button.dataset.id))));
