@@ -12,9 +12,10 @@
 .patient-main { min-width: 0; }
 .patient-main .view { padding: 0; }
 .patient-main .view-title { margin-top: 0; }
-.appointment-workspace { align-items: start; display: grid; gap: 22px; grid-template-columns: minmax(210px, 0.8fr) minmax(0, 2.2fr); }
-.appointment-workspace .patient-appointments-panel { min-height: 560px; }
+.appointment-workspace { align-items: start; display: block; }
+.appointment-workspace .appointment-booking-pane { min-width: 0; }
 .appointment-booking-pane .appointment-layout { display: block; }
+.patient-appointments-widget #appointmentsList { margin-top: 12px; }
 .patient-logout { margin-top: auto; }
 .patient-logout:hover { color: #b42318; }
 .patient-rightbar { display: grid; align-content: start; gap: 16px; }
@@ -44,5 +45,5 @@
 .quick-actions button span { color: var(--green); }
 .patient-help-card { background: #e8f6ed; border-color: #cce8d5; }
 .patient-help-card p { color: var(--text-muted); font-size: 12px; line-height: 1.45; margin: 8px 0 0; }
-@media (max-width: 1100px) { .patient-shell { grid-template-columns: 190px minmax(0, 1fr); } .patient-rightbar { grid-column: 2; grid-template-columns: repeat(2, minmax(0, 1fr)); } .appointment-workspace { grid-template-columns: minmax(180px, 0.8fr) minmax(0, 2fr); } }
-@media (max-width: 760px) { .patient-shell { display: block; } .patient-sidebar { margin-bottom: 16px; min-height: 0; } .patient-nav { grid-template-columns: repeat(3, 1fr); } .patient-nav-item { justify-content: center; padding: 9px 5px; } .patient-sidebar-note { display: none; } .patient-rightbar { display: grid; grid-template-columns: 1fr; margin-top: 20px; } .appointment-workspace { grid-template-columns: 1fr; } .appointment-workspace .patient-appointments-panel { min-height: 0; } .patient-logout { margin-top: 0; } }
+@media (max-width: 1100px) { .patient-shell { grid-template-columns: 190px minmax(0, 1fr); } .patient-rightbar { grid-column: 2; grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 760px) { .patient-shell { display: block; } .patient-sidebar { margin-bottom: 16px; min-height: 0; } .patient-nav { grid-template-columns: repeat(3, 1fr); } .patient-nav-item { justify-content: center; padding: 9px 5px; } .patient-sidebar-note { display: none; } .patient-rightbar { display: grid; grid-template-columns: 1fr; margin-top: 20px; } .patient-logout { margin-top: 0; } }

@@ -16,6 +16,27 @@
         <span class="brand-name">Sigla Tala</span>
       </div>
 
+      <div class="user-menu" id="userMenu">
+        <button class="user-menu-trigger" id="userMenuTrigger" aria-haspopup="true" aria-expanded="false" type="button">
+          <svg class="icon icon-invert" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+            <circle cx="12" cy="8" r="3.4"/>
+            <path d="M4.5 20c1.4-3.6 4.4-5.6 7.5-5.6s6.1 2 7.5 5.6"/>
+          </svg>
+          <span id="userMenuName">Account</span>
+          <svg class="icon icon-invert icon-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+            <path d="M6 9l6 6 6-6"/>
+          </svg>
+        </button>
+        <div class="user-dropdown hidden" id="userDropdown">
+          <button class="user-dropdown-item item-danger" id="logOutBtn" type="button">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+              <path d="M9 4H6a2 2 0 00-2 2v12a2 2 0 002 2h3M16 16l4-4-4-4M20 12H9"/>
+            </svg>
+            Log out
+          </button>
+        </div>
+      </div>
+
     </div>
   </header>
 
@@ -27,7 +48,6 @@
           <button class="patient-nav-item active" data-patient-view="dashboard" type="button"><span>⌂</span>Overview</button>
           <button class="patient-nav-item" data-patient-view="appointment" type="button"><span>▣</span>Appointments</button>
           <button class="patient-nav-item" data-patient-view="account" type="button"><span>◯</span>My profile</button>
-          <button class="patient-nav-item patient-logout" id="logOutBtn" type="button"><span>↪</span>Log out</button>
         </nav>
         <div class="patient-sidebar-note"><strong>Need help?</strong><span>Contact the health center for assistance.</span></div>
       </aside>
@@ -47,19 +67,6 @@
 
     <section class="view hidden" id="appointmentView">
       <div class="appointment-workspace">
-        <div class="panel patient-appointments-panel">
-          <h2 class="view-title">
-            <svg class="icon icon-title" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
-              <circle cx="12" cy="12" r="9"/>
-              <path d="M12 7v5l3.5 2"/>
-            </svg>
-            My Appointments
-          </h2>
-
-        <div id="appointmentsList">
-          <p class="empty-state">Loading appointments...</p>
-        </div>
-        </div>
         <div class="appointment-booking-pane">
           <div class="appointment-layout">
           <div class="panel">
@@ -214,12 +221,18 @@
     </section>
       </div>
       <aside class="patient-rightbar" aria-label="Patient tools">
-        <section class="patient-widget calendar-widget">
+        <section class="patient-widget calendar-widget" id="patientCalendarWidget">
           <div class="widget-heading"><h2>Calendar</h2><span>▣</span></div>
           <div class="calendar-toolbar"><button id="patientCalendarPrev" type="button" aria-label="Previous month">‹</button><strong id="patientCalendarLabel"></strong><button id="patientCalendarNext" type="button" aria-label="Next month">›</button></div>
           <div class="patient-calendar-weekdays"><span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span></div>
           <div class="patient-calendar-grid" id="patientCalendarGrid"></div>
           <div class="selected-date-preview" id="selectedDatePreview"><p>Select a date to view the scheduled morning worker.</p></div>
+        </section>
+        <section class="patient-widget patient-appointments-widget hidden" id="patientAppointmentsWidget">
+          <div class="widget-heading"><h2>My Appointments</h2><span>◷</span></div>
+          <div id="appointmentsList">
+            <p class="empty-state">Loading appointments...</p>
+          </div>
         </section>
         <section class="patient-widget quick-actions">
           <div class="widget-heading"><h2>Quick actions</h2><span>+</span></div>

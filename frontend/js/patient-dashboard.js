@@ -85,6 +85,12 @@ const dashboardView =
 const appointmentView =
     document.getElementById("appointmentView");
 
+const patientCalendarWidget =
+    document.getElementById("patientCalendarWidget");
+
+const patientAppointmentsWidget =
+    document.getElementById("patientAppointmentsWidget");
+
 const accountView =
     document.getElementById("accountView");
 
@@ -193,6 +199,12 @@ function showView(viewName) {
                 buttonView === "appointment"
             );
         });
+
+    if (patientCalendarWidget && patientAppointmentsWidget) {
+        const isAppointmentView = viewName === "appointment";
+        patientCalendarWidget.classList.toggle("hidden", isAppointmentView);
+        patientAppointmentsWidget.classList.toggle("hidden", !isAppointmentView);
+    }
 
 
     closeUserMenu();
