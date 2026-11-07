@@ -101,6 +101,24 @@
     </section>
 
     <section class="view hidden" id="appointmentView">
+      <div class="panel panel-wide patient-appointments-panel">
+        <div class="patient-section-heading">
+          <h2 class="view-title">
+            <svg class="icon icon-title" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+              <circle cx="12" cy="12" r="9"/>
+              <path d="M12 7v5l3.5 2"/>
+            </svg>
+            My Appointments
+          </h2>
+          <button type="button" class="btn-primary patient-book-button" data-patient-view="appointment-booking">Book Appointment</button>
+        </div>
+        <div id="appointmentsList">
+          <p class="empty-state">Loading appointments...</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="view hidden" id="appointmentBookingView">
       <div class="appointment-layout">
 
         <div class="panel">
@@ -190,19 +208,6 @@
           </form>
         </div>
 
-        <div class="panel">
-          <h2 class="view-title">
-            <svg class="icon icon-title" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
-              <circle cx="12" cy="12" r="9"/>
-              <path d="M12 7v5l3.5 2"/>
-            </svg>
-            My Appointments
-          </h2>
-          <div id="appointmentsList">
-            <p class="empty-state">Loading appointments...</p>
-          </div>
-        </div>
-
       </div>
     </section>
 
@@ -276,7 +281,7 @@
         </section>
         <section class="patient-widget quick-actions">
           <div class="widget-heading"><h2>Quick actions</h2><span>+</span></div>
-          <button type="button" data-patient-view="appointment">Book an appointment <span>→</span></button>
+          <button type="button" data-patient-view="appointment-booking">Book an appointment <span>→</span></button>
           <button type="button" data-patient-view="dashboard">View announcements <span>→</span></button>
         </section>
         <section class="patient-widget patient-help-card"><strong>Before your visit</strong><p>Choose a date with a scheduled worker before booking your appointment.</p></section>

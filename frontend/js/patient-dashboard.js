@@ -85,6 +85,9 @@ const dashboardView =
 const appointmentView =
     document.getElementById("appointmentView");
 
+const appointmentBookingView =
+    document.getElementById("appointmentBookingView");
+
 const accountView =
     document.getElementById("accountView");
 
@@ -96,6 +99,9 @@ const views = {
 
     appointment:
         appointmentView,
+
+    "appointment-booking":
+        appointmentBookingView,
 
     account:
         accountView
@@ -183,6 +189,17 @@ function showView(viewName) {
 
         });
 
+    document
+        .querySelectorAll(".patient-nav-item[data-patient-view]")
+        .forEach((button) => {
+            const buttonView = button.dataset.patientView;
+            button.classList.toggle(
+                "active",
+                buttonView === viewName ||
+                (viewName === "appointment-booking" && buttonView === "appointment")
+            );
+        });
+
 
     closeUserMenu();
 
@@ -191,7 +208,7 @@ function showView(viewName) {
     }
 
 
-    if (viewName === "appointment") {
+    if (viewName === "appointment" || viewName === "appointment-booking") {
 
         loadAppointments();
 
