@@ -237,19 +237,50 @@ async function loadActivity() {
     } catch (error) { showToast(error.message, "error"); }
 }
 
-function exportCsv() {
+function excelCell(value, header = false) {
+    const type = typeof value === "number" ? "Number" : "String";
+    const style = header ? ' ss:StyleID="Header"' : "";
+    return `<Cell${style}><Data ss:Type="${type}">${escapeHtml(value)}</Data></Cell>`;
+}
+
+function excelRow(values, header = false) {
+    return `<Row>${values.map((value) => excelCell(value, header)).join("")}</Row>`;
+}
+
+function exportExcel() {
     const headers = ["Date", "Time", "Patient", "Category", "Worker", "Status"];
-    const rows = reportData.appointments.map((appointment) => [appointment.date, appointment.time_preference, appointment.patient_name, appointment.category, appointment.worker_name || "Unassigned", appointment.status]);
-    const csv = [headers, ...rows].map((row) => row.map((value) => `"${String(value || "").replace(/"/g, '""')}"`).join(",")).join("\r\n");
+    const rows = reportData.appointments.map((appointment) => [
+        formatDateOnly(appointment.date),
+        appointment.time_preference,
+        appointment.patient_name,
+        appointment.category,
+        appointment.worker_name || "Unassigned",
+        appointment.status
+    ]);
+    const categoryRows = (reportData.categories || []).map((category) => [
+        category.category,
+        Number(category.patients || 0),
+        Number(category.total || 0)
+    ]);
+    const xml = `<?xml version="1.0"?>
+<?mso-application progid="Excel.Sheet"?>
+<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
+ xmlns:o="urn:schemas-microsoft-com:office:office"
+ xmlns:x="urn:schemas-microsoft-com:office:excel"
+ xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">
+ <Styles><Style ss:ID="Header"><Font ss:Bold="1" ss:Color="#FFFFFF"/><Interior ss:Color="#1E8E5A" ss:Pattern="Solid"/></Style></Styles>
+ <Worksheet ss:Name="Appointments"><Table>${excelRow(headers, true)}${rows.map((row) => excelRow(row)).join("")}</Table></Worksheet>
+ <Worksheet ss:Name="Categories"><Table>${excelRow(["Appointment category", "Patients", "Appointments"], true)}${categoryRows.map((row) => excelRow(row)).join("")}</Table></Worksheet>
+</Workbook>`;
     const link = document.createElement("a");
-    link.href = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
-    link.download = `sigla-tala-appointments-${document.getElementById("fromDate").value}-to-${document.getElementById("toDate").value}.csv`;
+    link.href = URL.createObjectURL(new Blob([xml], { type: "application/vnd.ms-excel" }));
+    link.download = `sigla-tala-report-${document.getElementById("fromDate").value}-to-${document.getElementById("toDate").value}.xls`;
     link.click();
     URL.revokeObjectURL(link.href);
 }
 
 document.getElementById("refreshBtn").addEventListener("click", async () => { await loadReport(); await loadSchedules(); await loadActivity(); });
-document.getElementById("exportBtn").addEventListener("click", exportCsv);
+document.getElementById("exportBtn").addEventListener("click", exportExcel);
 document.getElementById("reloadAssignmentsBtn").addEventListener("click", loadAssignments);
 document.getElementById("reloadActivityBtn").addEventListener("click", loadActivity);
 document.getElementById("scheduleSearch").addEventListener("input", renderSchedules);
