@@ -85,9 +85,6 @@ const dashboardView =
 const appointmentView =
     document.getElementById("appointmentView");
 
-const appointmentBookingView =
-    document.getElementById("appointmentBookingView");
-
 const accountView =
     document.getElementById("accountView");
 
@@ -99,9 +96,6 @@ const views = {
 
     appointment:
         appointmentView,
-
-    "appointment-booking":
-        appointmentBookingView,
 
     account:
         accountView
@@ -196,7 +190,7 @@ function showView(viewName) {
             button.classList.toggle(
                 "active",
                 buttonView === viewName ||
-                (viewName === "appointment-booking" && buttonView === "appointment")
+                buttonView === "appointment"
             );
         });
 
@@ -208,7 +202,7 @@ function showView(viewName) {
     }
 
 
-    if (viewName === "appointment" || viewName === "appointment-booking") {
+    if (viewName === "appointment") {
 
         loadAppointments();
 
