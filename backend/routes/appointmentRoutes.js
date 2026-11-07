@@ -46,6 +46,12 @@ router.get(
 );
 
 router.get(
+    "/scheduled-workers",
+    verifyToken,
+    appointmentController.getScheduledWorkersForDate
+);
+
+router.get(
     "/my-appointments",
     verifyToken,
     appointmentController.getMyAppointments

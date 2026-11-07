@@ -54,6 +54,30 @@ const getProviderForAppointmentType = (req, res) => {
     });
 };
 
+const getScheduledWorkersForDate = (req, res) => {
+    const appointmentDate = String(req.query.date || "").trim();
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(appointmentDate)) {
+        return res.status(400).json({ success: false, message: "A valid date is required." });
+    }
+
+    leadAdminModel.getSchedules(appointmentDate, appointmentDate, (err, schedules) => {
+        if (err) {
+            console.error("GET SCHEDULED WORKERS ERROR:", err);
+            return res.status(500).json({ success: false, message: "Unable to load the scheduled workers." });
+        }
+        res.json({
+            success: true,
+            date: appointmentDate,
+            schedules: schedules.map((schedule) => ({
+                worker_name: schedule.worker_name,
+                job_specification: schedule.job_specification,
+                start_time: String(schedule.start_time || "").slice(0, 5),
+                end_time: String(schedule.end_time || "").slice(0, 5)
+            }))
+        });
+    });
+};
+
 const createAppointment = (req, res) => {
     try {
         const {
@@ -441,6 +465,7 @@ const updateAppointmentStatus = (req, res) => {
 
 module.exports = {
     getProviderForAppointmentType,
+    getScheduledWorkersForDate,
     verifyAppointmentReceipt,
     createAppointment,
     getMyAppointments,

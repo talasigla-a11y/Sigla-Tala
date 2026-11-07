@@ -1,0 +1,43 @@
+.patient-shell { display: grid; gap: 24px; grid-template-columns: 220px minmax(0, 1fr) 300px; margin: 0 auto; max-width: 1500px; }
+.patient-sidebar, .patient-widget { background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); }
+.patient-sidebar { align-self: start; display: flex; flex-direction: column; min-height: 620px; padding: 18px 12px; }
+.patient-sidebar-brand { align-items: center; border-bottom: 1px solid #edf0f2; display: flex; gap: 10px; padding: 4px 8px 18px; }
+.patient-sidebar-brand .logo { flex: 0 0 34px; font-size: 18px; height: 34px; width: 34px; }
+.patient-nav { display: grid; gap: 5px; margin-top: 18px; }
+.patient-nav-item { align-items: center; background: transparent; border: 0; border-radius: 7px; color: var(--text-muted); display: flex; gap: 12px; padding: 12px; text-align: left; }
+.patient-nav-item span { color: var(--green); font-size: 18px; width: 20px; }
+.patient-nav-item:hover, .patient-nav-item.active { background: #e8f6ed; color: var(--green-dark); font-weight: 700; }
+.patient-sidebar-note { background: #f0f8f3; border-radius: 8px; display: grid; gap: 6px; margin: auto 5px 5px; padding: 13px; }
+.patient-sidebar-note span { color: var(--text-muted); font-size: 12px; line-height: 1.4; }
+.patient-main { min-width: 0; }
+.patient-main .view { padding: 0; }
+.patient-main .view-title { margin-top: 0; }
+.patient-rightbar { display: grid; align-content: start; gap: 16px; }
+.patient-widget { padding: 18px; }
+.widget-heading, .calendar-toolbar { align-items: center; display: flex; justify-content: space-between; }
+.widget-heading h2 { font-size: 17px; margin: 0; }
+.widget-heading span { color: var(--green); font-size: 18px; }
+.calendar-toolbar { margin: 18px 0 12px; }
+.calendar-toolbar button { background: transparent; border: 0; color: var(--green-dark); font-size: 24px; }
+.calendar-toolbar strong { font-size: 15px; }
+.patient-calendar-weekdays, .patient-calendar-grid { display: grid; gap: 4px; grid-template-columns: repeat(7, 1fr); text-align: center; }
+.patient-calendar-weekdays { color: var(--text-muted); font-size: 10px; margin-bottom: 7px; }
+.patient-calendar-grid button { background: transparent; border: 0; border-radius: 50%; color: var(--text-dark); font-size: 12px; height: 30px; width: 30px; }
+.patient-calendar-grid button:hover, .patient-calendar-grid button.selected { background: var(--green); color: #fff; }
+.patient-calendar-grid button.today { border: 1px solid var(--green); color: var(--green-dark); }
+.patient-calendar-grid button.muted { color: #b7c0c5; }
+.selected-date-preview { background: #f0f8f3; border-radius: 8px; margin-top: 16px; padding: 12px; }
+.selected-date-preview p { color: var(--text-muted); font-size: 12px; line-height: 1.4; margin: 0; }
+.selected-date-preview h3 { font-size: 13px; margin: 0 0 8px; }
+.scheduled-worker { border-top: 1px solid #dcebe1; display: grid; gap: 3px; padding: 9px 0 0; }
+.scheduled-worker + .scheduled-worker { margin-top: 9px; }
+.scheduled-worker strong { font-size: 12px; }
+.scheduled-worker span { color: var(--text-muted); font-size: 11px; }
+.quick-actions { display: grid; gap: 8px; }
+.quick-actions .widget-heading { margin-bottom: 5px; }
+.quick-actions button { background: transparent; border: 0; border-bottom: 1px solid #edf0f2; color: var(--text-dark); display: flex; justify-content: space-between; padding: 10px 0; text-align: left; }
+.quick-actions button span { color: var(--green); }
+.patient-help-card { background: #e8f6ed; border-color: #cce8d5; }
+.patient-help-card p { color: var(--text-muted); font-size: 12px; line-height: 1.45; margin: 8px 0 0; }
+@media (max-width: 1100px) { .patient-shell { grid-template-columns: 190px minmax(0, 1fr); } .patient-rightbar { grid-column: 2; grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 760px) { .patient-shell { display: block; } .patient-sidebar { margin-bottom: 16px; min-height: 0; } .patient-nav { grid-template-columns: repeat(3, 1fr); } .patient-nav-item { justify-content: center; padding: 9px 5px; } .patient-sidebar-note { display: none; } .patient-rightbar { display: grid; grid-template-columns: 1fr; margin-top: 20px; } }

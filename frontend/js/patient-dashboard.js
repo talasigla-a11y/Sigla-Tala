@@ -199,6 +199,86 @@ function showView(viewName) {
 
 }
 
+const patientCalendarGrid = document.getElementById("patientCalendarGrid");
+const patientCalendarLabel = document.getElementById("patientCalendarLabel");
+const selectedDatePreview = document.getElementById("selectedDatePreview");
+let patientCalendarDate = new Date();
+let selectedCalendarDate = new Date();
+
+function calendarDateKey(date) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+}
+
+function formatCalendarDate(value) {
+    return new Intl.DateTimeFormat(undefined, { month: "long", day: "numeric", year: "numeric" }).format(new Date(`${value}T00:00:00`));
+}
+
+async function loadScheduledWorkers(dateKey) {
+    selectedDatePreview.innerHTML = `<p>Loading scheduled workers for ${escapeHTML(formatCalendarDate(dateKey))}...</p>`;
+    try {
+        const token = localStorage.getItem("token");
+        const response = await fetch(`${API_BASE_URL}/api/appointments/scheduled-workers?date=${encodeURIComponent(dateKey)}`, {
+            headers: { Authorization: "Bearer " + token }
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.message || "Unable to load the schedule.");
+        if (!data.schedules.length) {
+            selectedDatePreview.innerHTML = `<h3>${escapeHTML(formatCalendarDate(dateKey))}</h3><p>No morning worker is scheduled on this date.</p>`;
+            return;
+        }
+        selectedDatePreview.innerHTML = `<h3>${escapeHTML(formatCalendarDate(dateKey))}</h3>${data.schedules.map((schedule) => `<div class="scheduled-worker"><strong>${escapeHTML(schedule.worker_name)}</strong><span>${escapeHTML(schedule.job_specification || "Health worker")}</span><span>${escapeHTML(schedule.start_time)}–${escapeHTML(schedule.end_time)}</span></div>`).join("")}`;
+    } catch (error) {
+        console.error("PATIENT SCHEDULE PREVIEW ERROR:", error);
+        selectedDatePreview.innerHTML = "<p>Unable to load the worker schedule. Please try again.</p>";
+    }
+}
+
+function renderPatientCalendar() {
+    const year = patientCalendarDate.getFullYear();
+    const month = patientCalendarDate.getMonth();
+    patientCalendarLabel.textContent = new Intl.DateTimeFormat(undefined, { month: "long", year: "numeric" }).format(patientCalendarDate);
+    const firstDay = new Date(year, month, 1).getDay();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const todayKey = calendarDateKey(new Date());
+    patientCalendarGrid.replaceChildren();
+    for (let index = 0; index < firstDay; index += 1) {
+        const blank = document.createElement("span");
+        patientCalendarGrid.appendChild(blank);
+    }
+    for (let day = 1; day <= daysInMonth; day += 1) {
+        const date = new Date(year, month, day);
+        const key = calendarDateKey(date);
+        const button = document.createElement("button");
+        button.type = "button";
+        button.textContent = day;
+        button.classList.toggle("today", key === todayKey);
+        button.classList.toggle("selected", key === calendarDateKey(selectedCalendarDate));
+        button.addEventListener("click", () => {
+            selectedCalendarDate = date;
+            renderPatientCalendar();
+            loadScheduledWorkers(key);
+        });
+        patientCalendarGrid.appendChild(button);
+    }
+}
+
+document.getElementById("patientCalendarPrev").addEventListener("click", () => {
+    patientCalendarDate = new Date(patientCalendarDate.getFullYear(), patientCalendarDate.getMonth() - 1, 1);
+    renderPatientCalendar();
+});
+document.getElementById("patientCalendarNext").addEventListener("click", () => {
+    patientCalendarDate = new Date(patientCalendarDate.getFullYear(), patientCalendarDate.getMonth() + 1, 1);
+    renderPatientCalendar();
+});
+document.querySelectorAll("[data-patient-view]").forEach((button) => {
+    button.addEventListener("click", () => showView(button.dataset.patientView));
+});
+renderPatientCalendar();
+loadScheduledWorkers(calendarDateKey(selectedCalendarDate));
+
 
 async function loadAnnouncements() {
 
