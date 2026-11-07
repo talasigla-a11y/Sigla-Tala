@@ -75,8 +75,8 @@ const saveSchedule = (req, res) => {
     const scheduleDate = String(req.body.scheduleDate || "");
     const startTime = String(req.body.startTime || "");
     const endTime = String(req.body.endTime || "");
-    if ((scheduleId !== null && (!Number.isSafeInteger(scheduleId) || scheduleId < 1)) || !Number.isSafeInteger(workerId) || workerId < 1 || !validDate(scheduleDate) || !/^\d{2}:\d{2}$/.test(startTime) || !/^\d{2}:\d{2}$/.test(endTime) || startTime === endTime) {
-        return res.status(400).json({ success: false, message: "Provide a valid worker, date, and time range. End time must differ from start time." });
+    if ((scheduleId !== null && (!Number.isSafeInteger(scheduleId) || scheduleId < 1)) || !Number.isSafeInteger(workerId) || workerId < 1 || !validDate(scheduleDate) || !/^\d{2}:\d{2}$/.test(startTime) || !/^\d{2}:\d{2}$/.test(endTime) || startTime < "07:00" || endTime > "17:00" || startTime >= endTime) {
+        return res.status(400).json({ success: false, message: "Morning shifts must be between 7:00 AM and 5:00 PM, with the end time later than the start time." });
     }
     leadAdminModel.getWorkerById(workerId, (workerErr, workers) => {
         if (workerErr) return res.status(500).json({ success: false, message: "Unable to validate the worker." });

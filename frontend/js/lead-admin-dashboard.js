@@ -7,6 +7,8 @@ let reportData = { appointments: [] };
 let workers = [];
 let schedules = [];
 let editingScheduleId = null;
+const MORNING_START = "07:00";
+const MORNING_END = "17:00";
 let reportPage = 1;
 const reportPageSize = 10;
 let toastTimer;
@@ -253,13 +255,19 @@ function formatScheduleDate(value) {
 function renderSchedules() {
     const query = document.getElementById("scheduleSearch").value.trim().toLowerCase();
     const specialization = document.getElementById("scheduleSpecialization").value;
+    const date = document.getElementById("scheduleDateFilter").value;
     const filtered = schedules.filter((schedule) => {
         const workerMatch = String(schedule.worker_name || "").toLowerCase().includes(query) || String(schedule.job_specification || "").toLowerCase().includes(query);
-        return workerMatch && (!specialization || schedule.job_specification === specialization);
+        const scheduleDate = String(schedule.schedule_date || "").slice(0, 10);
+        return workerMatch &&
+            (!specialization || schedule.job_specification === specialization) &&
+            (!date || scheduleDate === date) &&
+            schedule.start_time >= MORNING_START &&
+            schedule.end_time <= MORNING_END &&
+            schedule.start_time < schedule.end_time;
     });
     document.getElementById("scheduleRows").innerHTML = filtered.length ? filtered.map((schedule) => {
-        const overnight = schedule.end_time < schedule.start_time;
-        const hours = `${escapeHtml(schedule.start_time)}–${escapeHtml(schedule.end_time)}${overnight ? " (+1 day)" : ""}`;
+        const hours = `${escapeHtml(schedule.start_time)}–${escapeHtml(schedule.end_time)}`;
         return `<tr><td>${escapeHtml(formatScheduleDate(schedule.schedule_date))}</td><td>${escapeHtml(schedule.worker_name)}</td><td>${escapeHtml(schedule.job_specification || "—")}</td><td>${hours}</td><td>${escapeHtml(schedule.notes || "—")}</td><td class="schedule-actions"><button type="button" class="btn-secondary btn-compact edit-schedule" data-id="${schedule.id}">Edit</button><button type="button" class="btn-danger btn-compact delete-schedule" data-id="${schedule.id}">Delete</button></td></tr>`;
     }).join("") : emptyRow(6, "No schedules match the current filters.");
     document.querySelectorAll(".edit-schedule").forEach((button) => button.addEventListener("click", () => beginScheduleEdit(Number(button.dataset.id))));
@@ -304,12 +312,17 @@ function validateScheduleTime() {
     const end = document.getElementById("scheduleEnd").value;
     const message = document.getElementById("timeValidationMessage");
     if (!start || !end) { message.textContent = ""; return true; }
-    if (start === end) {
-        message.textContent = "Start and end time must be different.";
+    if (start < MORNING_START || start > MORNING_END || end < MORNING_START || end > MORNING_END) {
+        message.textContent = "Morning shifts must be between 7:00 AM and 5:00 PM.";
         message.className = "form-validation-message error";
         return false;
     }
-    message.textContent = end < start ? "Overnight shift: ends the next day." : "Same-day shift.";
+    if (start >= end) {
+        message.textContent = "End time must be later than start time.";
+        message.className = "form-validation-message error";
+        return false;
+    }
+    message.textContent = "Valid morning shift.";
     message.className = "form-validation-message valid";
     return true;
 }
@@ -375,6 +388,7 @@ document.getElementById("reloadAssignmentsBtn").addEventListener("click", loadAs
 document.getElementById("reloadActivityBtn").addEventListener("click", loadActivity);
 document.getElementById("scheduleSearch").addEventListener("input", renderSchedules);
 document.getElementById("scheduleSpecialization").addEventListener("change", renderSchedules);
+document.getElementById("scheduleDateFilter").addEventListener("change", renderSchedules);
 document.getElementById("scheduleStart").addEventListener("change", validateScheduleTime);
 document.getElementById("scheduleEnd").addEventListener("change", validateScheduleTime);
 document.querySelectorAll(".shift-template").forEach((button) => button.addEventListener("click", () => {

@@ -70,8 +70,9 @@
 .form-validation-message { display: block; font-size: 11px; margin-top: 4px; min-height: 14px; }
 .form-validation-message.valid { color: var(--green-dark); }
 .form-validation-message.error { color: var(--error); }
-.schedule-filters { display: flex; gap: 8px; }
+.schedule-filters { align-items: end; display: flex; gap: 8px; }
 .schedule-filters input, .schedule-filters select { border: 1px solid var(--border); border-radius: 6px; min-height: 36px; padding: 7px 9px; }
+.schedule-date-filter { color: var(--text-muted); display: flex; flex-direction: column; font-size: 11px; gap: 4px; }
 .schedule-actions { display: flex; gap: 6px; white-space: nowrap; }
 .btn-danger { background: #fff; border: 1px solid #e0aaa5; border-radius: 6px; color: #a52c23; padding: 7px 10px; }
 .status-pill { border-radius: 20px; display: inline-block; font-size: 11px; padding: 4px 8px; }
