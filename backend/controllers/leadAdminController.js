@@ -55,20 +55,34 @@ const getSchedules = (req, res) => {
 };
 
 const saveSchedule = (req, res) => {
+    const scheduleId = req.body.scheduleId ? Number(req.body.scheduleId) : null;
     const workerId = Number(req.body.workerId);
     const scheduleDate = String(req.body.scheduleDate || "");
     const startTime = String(req.body.startTime || "");
     const endTime = String(req.body.endTime || "");
-    if (!Number.isSafeInteger(workerId) || workerId < 1 || !validDate(scheduleDate) || !/^\d{2}:\d{2}$/.test(startTime) || !/^\d{2}:\d{2}$/.test(endTime) || startTime >= endTime) {
-        return res.status(400).json({ success: false, message: "Provide a valid worker, date, and time range." });
+    if ((scheduleId !== null && (!Number.isSafeInteger(scheduleId) || scheduleId < 1)) || !Number.isSafeInteger(workerId) || workerId < 1 || !validDate(scheduleDate) || !/^\d{2}:\d{2}$/.test(startTime) || !/^\d{2}:\d{2}$/.test(endTime) || startTime === endTime) {
+        return res.status(400).json({ success: false, message: "Provide a valid worker, date, and time range. End time must differ from start time." });
     }
     leadAdminModel.getWorkerById(workerId, (workerErr, workers) => {
         if (workerErr) return res.status(500).json({ success: false, message: "Unable to validate the worker." });
         if (!workers.length) return res.status(400).json({ success: false, message: "The selected account is not a worker." });
-        leadAdminModel.saveSchedule({ worker_id: workerId, schedule_date: scheduleDate, start_time: startTime, end_time: endTime, notes: String(req.body.notes || "").trim() }, req.user.id, (err) => {
+        leadAdminModel.saveSchedule({ id: scheduleId, worker_id: workerId, schedule_date: scheduleDate, start_time: startTime, end_time: endTime, notes: String(req.body.notes || "").trim() }, req.user.id, (err) => {
+            if (err && err.code === "SCHEDULE_CONFLICT") return res.status(409).json({ success: false, message: err.message });
             if (err) return res.status(500).json({ success: false, message: "Unable to save the schedule." });
             res.json({ success: true, message: "Worker schedule saved." });
         });
+    });
+};
+
+const deleteSchedule = (req, res) => {
+    const scheduleId = Number(req.params.scheduleId);
+    if (!Number.isSafeInteger(scheduleId) || scheduleId < 1) {
+        return res.status(400).json({ success: false, message: "A valid schedule is required." });
+    }
+    leadAdminModel.deleteSchedule(scheduleId, req.user.id, (err, deleted) => {
+        if (err) return res.status(500).json({ success: false, message: "Unable to delete the schedule." });
+        if (!deleted) return res.status(404).json({ success: false, message: "Schedule not found." });
+        res.json({ success: true, message: "Worker schedule deleted." });
     });
 };
 
@@ -81,4 +95,4 @@ const getActivityLogs = (req, res) => {
     });
 };
 
-module.exports = { getReport, getWorkers, assignAppointment, getSchedules, saveSchedule, getActivityLogs };
+module.exports = { getReport, getWorkers, assignAppointment, getSchedules, saveSchedule, deleteSchedule, getActivityLogs };

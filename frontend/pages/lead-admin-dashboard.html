@@ -73,17 +73,17 @@
   </section>
 
   <section id="schedulesPanel" class="lead-panel hidden">
-    <div class="lead-card"><h2>Set worker schedule</h2>
+    <div class="lead-card"><div class="card-heading"><div><h2 id="scheduleFormTitle">Set worker schedule</h2><p class="field-hint">For overnight shifts, set an end time earlier than the start time. The shift will continue into the next day.</p></div><button class="btn-secondary btn-compact hidden" id="cancelScheduleEditBtn" type="button">Cancel edit</button></div>
       <form id="scheduleForm" class="schedule-form">
         <label>Worker<select id="scheduleWorker" required></select></label>
         <label>Date<input id="scheduleDate" type="date" required></label>
-        <label>Start<input id="scheduleStart" type="time" required></label>
-        <label>End<input id="scheduleEnd" type="time" required></label>
+        <label>Start<input id="scheduleStart" type="time" required><span class="time-template-buttons"><button type="button" class="shift-template" data-start="08:00" data-end="17:00">Morning</button><button type="button" class="shift-template" data-start="19:00" data-end="05:00">Night</button></span></label>
+        <label>End<input id="scheduleEnd" type="time" required><span id="timeValidationMessage" class="form-validation-message"></span></label>
         <label class="schedule-notes">Notes<input id="scheduleNotes" maxlength="500"></label>
         <button class="btn-primary btn-compact" type="submit">Save schedule</button>
       </form>
     </div>
-    <div class="lead-card"><h2>Scheduled workers</h2><div class="table-wrap"><table><thead><tr><th>Date</th><th>Worker</th><th>Specialization</th><th>Hours</th><th>Notes</th></tr></thead><tbody id="scheduleRows"></tbody></table></div></div>
+    <div class="lead-card"><div class="card-heading"><div><h2>Scheduled workers</h2><p class="field-hint">Search by worker name or specialization.</p></div><div class="schedule-filters"><input id="scheduleSearch" type="search" placeholder="Search workers..."><select id="scheduleSpecialization"><option value="">All specializations</option></select></div></div><div class="table-wrap"><table><thead><tr><th>Date</th><th>Worker</th><th>Specialization</th><th>Hours</th><th>Notes</th><th>Actions</th></tr></thead><tbody id="scheduleRows"></tbody></table></div></div>
   </section>
 
   <section id="activityPanel" class="lead-panel hidden">

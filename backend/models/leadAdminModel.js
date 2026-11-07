@@ -143,28 +143,60 @@ const getSchedules = (from, to, callback) => {
 };
 
 const saveSchedule = (schedule, actorId, callback) => {
-    const sql = `
-        INSERT INTO worker_schedules
-            (worker_id, schedule_date, start_time, end_time, notes, created_by)
-        VALUES (?, ?, ?, ?, ?, ?)
-        ON DUPLICATE KEY UPDATE
-            start_time = VALUES(start_time),
-            end_time = VALUES(end_time),
-            notes = VALUES(notes),
-            created_by = VALUES(created_by)
+    const conflictSql = `
+        SELECT id, schedule_date, start_time, end_time
+        FROM worker_schedules
+        WHERE worker_id = ?
+          AND schedule_date = ?
+          AND (? IS NULL OR id <> ?)
+        LIMIT 1
     `;
-    db.query(sql, [
+    db.query(conflictSql, [
+        schedule.worker_id,
+        schedule.schedule_date,
+        schedule.id || null,
+        schedule.id || null
+    ], (conflictErr, conflicts) => {
+        if (conflictErr) return callback(conflictErr);
+        if (conflicts.length) {
+            const error = new Error("This worker already has a schedule on the selected date.");
+            error.code = "SCHEDULE_CONFLICT";
+            return callback(error, conflicts[0]);
+        }
+
+    const sql = schedule.id
+        ? `UPDATE worker_schedules
+           SET worker_id = ?, schedule_date = ?, start_time = ?, end_time = ?, notes = ?, created_by = ?
+           WHERE id = ?`
+        : `INSERT INTO worker_schedules
+           (worker_id, schedule_date, start_time, end_time, notes, created_by)
+           VALUES (?, ?, ?, ?, ?, ?)`;
+    const values = [
         schedule.worker_id,
         schedule.schedule_date,
         schedule.start_time,
         schedule.end_time,
         schedule.notes || null,
         actorId
-    ], (err, result) => {
+    ];
+    if (schedule.id) values.push(schedule.id);
+    db.query(sql, values, (err, result) => {
         if (err) return callback(err);
-        logActivity(actorId, "schedule_saved", "worker_schedule", result.insertId || schedule.worker_id, `Schedule updated for ${schedule.schedule_date}`, (logErr) => {
+        logActivity(actorId, schedule.id ? "schedule_updated" : "schedule_saved", "worker_schedule", schedule.id || result.insertId || schedule.worker_id, `Schedule updated for ${schedule.schedule_date}`, (logErr) => {
             if (logErr) return callback(logErr);
             callback(null, result);
+        });
+    });
+    });
+};
+
+const deleteSchedule = (scheduleId, actorId, callback) => {
+    db.query("DELETE FROM worker_schedules WHERE id = ?", [scheduleId], (err, result) => {
+        if (err) return callback(err);
+        if (!result.affectedRows) return callback(null, false);
+        logActivity(actorId, "schedule_deleted", "worker_schedule", scheduleId, "Worker schedule deleted", (logErr) => {
+            if (logErr) return callback(logErr);
+            callback(null, true);
         });
     });
 };
@@ -198,6 +230,7 @@ module.exports = {
     assignAppointment,
     getSchedules,
     saveSchedule,
+    deleteSchedule,
     logActivity,
     getActivityLogs
 };

@@ -10,6 +10,8 @@ router.get("/workers", controller.getWorkers);
 router.put("/appointments/assign", controller.assignAppointment);
 router.get("/schedules", controller.getSchedules);
 router.post("/schedules", controller.saveSchedule);
+router.put("/schedules", controller.saveSchedule);
+router.delete("/schedules/:scheduleId", controller.deleteSchedule);
 router.get("/activity-logs", controller.getActivityLogs);
 
 module.exports = router;

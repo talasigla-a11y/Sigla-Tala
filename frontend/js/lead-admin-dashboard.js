@@ -5,6 +5,8 @@ const role = user && user.role ? String(user.role).toLowerCase() : "";
 const toast = document.getElementById("toast");
 let reportData = { appointments: [] };
 let workers = [];
+let schedules = [];
+let editingScheduleId = null;
 let toastTimer;
 
 if (!token || role !== "lead-admin") {
@@ -123,8 +125,82 @@ async function assignAppointment(event) {
 async function loadSchedules() {
     try {
         const data = await request(`/schedules${rangeQuery()}`);
-        document.getElementById("scheduleRows").innerHTML = data.schedules.length ? data.schedules.map((schedule) => `<tr><td>${escapeHtml(schedule.schedule_date)}</td><td>${escapeHtml(schedule.worker_name)}</td><td>${escapeHtml(schedule.job_specification || "—")}</td><td>${escapeHtml(schedule.start_time)}–${escapeHtml(schedule.end_time)}</td><td>${escapeHtml(schedule.notes || "—")}</td></tr>`).join("") : emptyRow(5);
+        schedules = data.schedules || [];
+        populateSpecializations();
+        renderSchedules();
     } catch (error) { showToast(error.message, "error"); }
+}
+
+function populateSpecializations() {
+    const select = document.getElementById("scheduleSpecialization");
+    const currentValue = select.value;
+    const specializations = [...new Set(schedules.map((schedule) => schedule.job_specification).filter(Boolean))].sort();
+    select.innerHTML = `<option value="">All specializations</option>${specializations.map((specialization) => `<option value="${escapeHtml(specialization)}">${escapeHtml(specialization)}</option>`).join("")}`;
+    select.value = specializations.includes(currentValue) ? currentValue : "";
+}
+
+function renderSchedules() {
+    const query = document.getElementById("scheduleSearch").value.trim().toLowerCase();
+    const specialization = document.getElementById("scheduleSpecialization").value;
+    const filtered = schedules.filter((schedule) => {
+        const workerMatch = String(schedule.worker_name || "").toLowerCase().includes(query) || String(schedule.job_specification || "").toLowerCase().includes(query);
+        return workerMatch && (!specialization || schedule.job_specification === specialization);
+    });
+    document.getElementById("scheduleRows").innerHTML = filtered.length ? filtered.map((schedule) => {
+        const overnight = schedule.end_time < schedule.start_time;
+        const hours = `${escapeHtml(schedule.start_time)}–${escapeHtml(schedule.end_time)}${overnight ? " (+1 day)" : ""}`;
+        return `<tr><td>${escapeHtml(schedule.schedule_date)}</td><td>${escapeHtml(schedule.worker_name)}</td><td>${escapeHtml(schedule.job_specification || "—")}</td><td>${hours}</td><td>${escapeHtml(schedule.notes || "—")}</td><td class="schedule-actions"><button type="button" class="btn-secondary btn-compact edit-schedule" data-id="${schedule.id}">Edit</button><button type="button" class="btn-danger btn-compact delete-schedule" data-id="${schedule.id}">Delete</button></td></tr>`;
+    }).join("") : emptyRow(6, "No schedules match the current filters.");
+    document.querySelectorAll(".edit-schedule").forEach((button) => button.addEventListener("click", () => beginScheduleEdit(Number(button.dataset.id))));
+    document.querySelectorAll(".delete-schedule").forEach((button) => button.addEventListener("click", () => removeSchedule(Number(button.dataset.id))));
+}
+
+function beginScheduleEdit(scheduleId) {
+    const schedule = schedules.find((item) => Number(item.id) === scheduleId);
+    if (!schedule) return;
+    editingScheduleId = scheduleId;
+    document.getElementById("scheduleWorker").value = schedule.worker_id;
+    document.getElementById("scheduleDate").value = String(schedule.schedule_date).slice(0, 10);
+    document.getElementById("scheduleStart").value = String(schedule.start_time).slice(0, 5);
+    document.getElementById("scheduleEnd").value = String(schedule.end_time).slice(0, 5);
+    document.getElementById("scheduleNotes").value = schedule.notes || "";
+    document.getElementById("scheduleFormTitle").textContent = "Edit worker schedule";
+    document.getElementById("cancelScheduleEditBtn").classList.remove("hidden");
+    validateScheduleTime();
+    document.getElementById("scheduleForm").scrollIntoView({ behavior: "smooth", block: "center" });
+}
+
+function resetScheduleForm() {
+    editingScheduleId = null;
+    document.getElementById("scheduleForm").reset();
+    document.getElementById("scheduleDate").value = document.getElementById("toDate").value;
+    document.getElementById("scheduleFormTitle").textContent = "Set worker schedule";
+    document.getElementById("cancelScheduleEditBtn").classList.add("hidden");
+    document.getElementById("timeValidationMessage").textContent = "";
+}
+
+async function removeSchedule(scheduleId) {
+    if (!window.confirm("Delete this worker schedule?")) return;
+    try {
+        await request(`/schedules/${scheduleId}`, { method: "DELETE" });
+        showToast("Worker schedule deleted.");
+        await loadSchedules();
+    } catch (error) { showToast(error.message, "error"); }
+}
+
+function validateScheduleTime() {
+    const start = document.getElementById("scheduleStart").value;
+    const end = document.getElementById("scheduleEnd").value;
+    const message = document.getElementById("timeValidationMessage");
+    if (!start || !end) { message.textContent = ""; return true; }
+    if (start === end) {
+        message.textContent = "Start and end time must be different.";
+        message.className = "form-validation-message error";
+        return false;
+    }
+    message.textContent = end < start ? "Overnight shift: ends the next day." : "Same-day shift.";
+    message.className = "form-validation-message valid";
+    return true;
 }
 
 async function loadActivity() {
@@ -149,6 +225,16 @@ document.getElementById("refreshBtn").addEventListener("click", async () => { aw
 document.getElementById("exportBtn").addEventListener("click", exportCsv);
 document.getElementById("reloadAssignmentsBtn").addEventListener("click", loadAssignments);
 document.getElementById("reloadActivityBtn").addEventListener("click", loadActivity);
+document.getElementById("scheduleSearch").addEventListener("input", renderSchedules);
+document.getElementById("scheduleSpecialization").addEventListener("change", renderSchedules);
+document.getElementById("scheduleStart").addEventListener("change", validateScheduleTime);
+document.getElementById("scheduleEnd").addEventListener("change", validateScheduleTime);
+document.querySelectorAll(".shift-template").forEach((button) => button.addEventListener("click", () => {
+    document.getElementById("scheduleStart").value = button.dataset.start;
+    document.getElementById("scheduleEnd").value = button.dataset.end;
+    validateScheduleTime();
+}));
+document.getElementById("cancelScheduleEditBtn").addEventListener("click", resetScheduleForm);
 document.getElementById("logoutBtn").addEventListener("click", () => { localStorage.removeItem("token"); localStorage.removeItem("user"); window.location.replace("../pages/login.html"); });
 document.querySelectorAll(".lead-tab").forEach((tab) => tab.addEventListener("click", async () => {
     document.querySelectorAll(".lead-tab").forEach((item) => item.classList.toggle("active", item === tab));
@@ -159,9 +245,12 @@ document.querySelectorAll(".lead-tab").forEach((tab) => tab.addEventListener("cl
 }));
 document.getElementById("scheduleForm").addEventListener("submit", async (event) => {
     event.preventDefault();
+    if (!validateScheduleTime()) { showToast("Please correct the schedule time.", "error"); return; }
     try {
-        await request("/schedules", { method: "POST", body: JSON.stringify({ workerId: document.getElementById("scheduleWorker").value, scheduleDate: document.getElementById("scheduleDate").value, startTime: document.getElementById("scheduleStart").value, endTime: document.getElementById("scheduleEnd").value, notes: document.getElementById("scheduleNotes").value }) });
+        const schedule = { scheduleId: editingScheduleId, workerId: document.getElementById("scheduleWorker").value, scheduleDate: document.getElementById("scheduleDate").value, startTime: document.getElementById("scheduleStart").value, endTime: document.getElementById("scheduleEnd").value, notes: document.getElementById("scheduleNotes").value };
+        await request("/schedules", { method: editingScheduleId ? "PUT" : "POST", body: JSON.stringify(schedule) });
         showToast("Worker schedule saved.");
+        resetScheduleForm();
         await loadSchedules();
     } catch (error) { showToast(error.message, "error"); }
 });
