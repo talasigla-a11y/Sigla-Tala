@@ -344,6 +344,21 @@ function excelRow(values, header = false) {
     return `<Row>${values.map((value) => excelCell(value, header)).join("")}</Row>`;
 }
 
+function excelSheetName(dateValue, usedNames) {
+    const baseName = formatDateOnly(dateValue)
+        .replace(/[\\/*?:[\]]/g, "")
+        .slice(0, 31) || "Date";
+    let name = baseName;
+    let suffix = 2;
+    while (usedNames.has(name)) {
+        const suffixText = ` (${suffix})`;
+        name = `${baseName.slice(0, 31 - suffixText.length)}${suffixText}`;
+        suffix += 1;
+    }
+    usedNames.add(name);
+    return name;
+}
+
 function exportExcel() {
     const headers = ["Date", "Time", "Patient", "Category", "Worker", "Status"];
     const rows = reportData.appointments.map((appointment) => [
@@ -359,6 +374,24 @@ function exportExcel() {
         Number(category.patients || 0),
         Number(category.total || 0)
     ]);
+    const appointmentsByDate = reportData.appointments.reduce((groups, appointment) => {
+        const dateKey = String(appointment.date || "").slice(0, 10);
+        if (!groups[dateKey]) groups[dateKey] = [];
+        groups[dateKey].push(appointment);
+        return groups;
+    }, {});
+    const usedSheetNames = new Set(["Appointments", "Categories"]);
+    const dateWorksheets = Object.keys(appointmentsByDate).sort().map((dateKey) => {
+        const dateRows = appointmentsByDate[dateKey].map((appointment) => [
+            formatDateOnly(appointment.date),
+            appointment.time_preference,
+            appointment.patient_name,
+            appointment.category,
+            appointment.worker_name || "Unassigned",
+            appointment.status
+        ]);
+        return `<Worksheet ss:Name="${escapeHtml(excelSheetName(dateKey, usedSheetNames))}"><Table>${excelRow(headers, true)}${dateRows.map((row) => excelRow(row)).join("")}</Table></Worksheet>`;
+    }).join("");
     const xml = `<?xml version="1.0"?>
 <?mso-application progid="Excel.Sheet"?>
 <Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
@@ -368,6 +401,7 @@ function exportExcel() {
  <Styles><Style ss:ID="Header"><Font ss:Bold="1" ss:Color="#FFFFFF"/><Interior ss:Color="#1E8E5A" ss:Pattern="Solid"/></Style></Styles>
  <Worksheet ss:Name="Appointments"><Table>${excelRow(headers, true)}${rows.map((row) => excelRow(row)).join("")}</Table></Worksheet>
  <Worksheet ss:Name="Categories"><Table>${excelRow(["Appointment category", "Patients", "Appointments"], true)}${categoryRows.map((row) => excelRow(row)).join("")}</Table></Worksheet>
+ ${dateWorksheets}
 </Workbook>`;
     const link = document.createElement("a");
     link.href = URL.createObjectURL(new Blob([xml], { type: "application/vnd.ms-excel" }));
