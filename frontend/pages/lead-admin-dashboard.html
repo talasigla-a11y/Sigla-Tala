@@ -35,26 +35,6 @@
   </div>
 
   <section id="reportsPanel" class="lead-panel">
-    <div class="metric-grid">
-      <article class="metric-card"><span>Total appointments</span><strong id="totalAppointments">0</strong></article>
-      <article class="metric-card"><span>Unique patients</span><strong id="uniquePatients">0</strong></article>
-      <article class="metric-card"><span>Accepted</span><strong id="acceptedAppointments">0</strong></article>
-      <article class="metric-card"><span>Rejected</span><strong id="rejectedAppointments">0</strong></article>
-    </div>
-    <div class="lead-chart-grid">
-      <article class="lead-card"><h2>Appointments by day</h2><div id="dailyChart" class="bar-chart" aria-label="Appointments by day"></div></article>
-      <article class="lead-card category-report-card">
-        <div class="card-heading">
-          <div><h2>Patients by appointment category</h2><p class="field-hint">Number of patients who selected each appointment type.</p></div>
-          <span class="chart-badge">Graph report</span>
-        </div>
-        <div id="categoryChart" class="bar-chart category-chart" aria-label="Patients by appointment category"></div>
-      </article>
-    </div>
-    <div class="lead-card category-table-card">
-      <div class="card-heading"><h2>Category totals</h2><span id="categoryStatus" class="field-hint"></span></div>
-      <div class="table-wrap"><table><thead><tr><th>Appointment category</th><th>Patients</th><th>Appointments</th><th>Share</th></tr></thead><tbody id="categoryRows"></tbody></table></div>
-    </div>
     <div class="report-filter-card">
       <div class="filter-card-heading">
         <div><h3>Report filters</h3><p>Choose a date range and narrow the appointment results.</p></div>
@@ -74,6 +54,26 @@
           <button class="btn-secondary btn-compact" id="exportBtn" type="button">Export Excel</button>
         </div>
       </div>
+    </div>
+    <div class="metric-grid">
+      <article class="metric-card"><span>Total appointments</span><strong id="totalAppointments">0</strong></article>
+      <article class="metric-card"><span>Unique patients</span><strong id="uniquePatients">0</strong></article>
+      <article class="metric-card"><span>Accepted</span><strong id="acceptedAppointments">0</strong></article>
+      <article class="metric-card"><span>Rejected</span><strong id="rejectedAppointments">0</strong></article>
+    </div>
+    <div class="lead-chart-grid">
+      <article class="lead-card"><h2>Appointments by day</h2><div id="dailyChart" class="bar-chart" aria-label="Appointments by day"></div></article>
+      <article class="lead-card category-report-card">
+        <div class="card-heading">
+          <div><h2>Patients by appointment category</h2><p class="field-hint">Number of patients who selected each appointment type.</p></div>
+          <span class="chart-badge">Graph report</span>
+        </div>
+        <div id="categoryChart" class="bar-chart category-chart" aria-label="Patients by appointment category"></div>
+      </article>
+    </div>
+    <div class="lead-card category-table-card">
+      <div class="card-heading"><h2>Category totals</h2><span id="categoryStatus" class="field-hint"></span></div>
+      <div class="table-wrap"><table><thead><tr><th>Appointment category</th><th>Patients</th><th>Appointments</th><th>Share</th></tr></thead><tbody id="categoryRows"></tbody></table></div>
     </div>
     <div class="lead-card appointment-report-card">
       <div class="card-heading appointment-report-heading"><div><h2>Appointment report</h2><span id="reportStatus" class="field-hint"></span></div><input id="reportSearch" class="report-search" type="search" placeholder="Search patient, worker, or category..."></div>
