@@ -92,7 +92,13 @@
 .schedule-planner-card .schedule-roster-heading { align-items: flex-start; margin: 0 0 20px; }
 .schedule-planner-card .schedule-roster-heading h3 { font-size: 15px; line-height: 1.4; margin: 0; }
 .schedule-planner-card .schedule-roster-empty { background: transparent; border: 0; padding: 24px 8px; }
-.schedule-planner-card .schedule-roster-item { grid-template-columns: 36px minmax(0, 1fr) auto; }
+.schedule-planner-card .schedule-roster-item { align-items: center; grid-template-columns: 36px minmax(0, 1fr); }
+.schedule-planner-card .schedule-roster-worker { min-width: 0; }
+.schedule-planner-card .schedule-roster-worker strong { overflow-wrap: normal; word-break: normal; }
+.schedule-planner-card .schedule-roster-worker span { overflow-wrap: normal; word-break: normal; }
+.schedule-planner-card .schedule-roster-worker small { line-height: 1.4; overflow-wrap: anywhere; }
+.schedule-planner-card .schedule-roster-item > .schedule-actions { grid-column: 1 / -1; justify-content: flex-end; width: 100%; }
+.schedule-planner-card .schedule-roster-item > .schedule-actions .btn-compact { flex: 0 1 112px; min-width: 0; padding: 8px 12px; }
 .schedule-list-card .table-wrap { margin-top: 12px; }
 .schedule-list-card table { min-width: 1120px; }
 .schedule-list-card .attendance-status, .schedule-list-card .attendance-late-hours { border: 1px solid var(--border); border-radius: 6px; min-height: 34px; min-width: 105px; padding: 5px 8px; }
