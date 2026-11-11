@@ -101,6 +101,26 @@ const deleteSchedule = (req, res) => {
     });
 };
 
+const updateScheduleAttendance = (req, res) => {
+    const scheduleId = Number(req.params.scheduleId);
+    const attendanceStatus = String(req.body.attendanceStatus || "").toLowerCase();
+    const rawLateHours = req.body.lateHours;
+    const lateHours = attendanceStatus === "late" ? Number(rawLateHours) : null;
+    if (!Number.isSafeInteger(scheduleId) || scheduleId < 1 ||
+        !["present", "absent", "late"].includes(attendanceStatus) ||
+        (attendanceStatus === "late" && (!Number.isFinite(lateHours) || lateHours <= 0 || lateHours > 24))) {
+        return res.status(400).json({ success: false, message: "Choose Present, Absent, or Late. Late hours must be greater than 0 and no more than 24." });
+    }
+    leadAdminModel.updateScheduleAttendance(scheduleId, attendanceStatus, lateHours, req.user.id, (err, updated) => {
+        if (err) {
+            console.error("LEAD ADMIN SCHEDULE ATTENDANCE ERROR:", err);
+            return res.status(500).json({ success: false, message: "Unable to update schedule attendance." });
+        }
+        if (!updated) return res.status(404).json({ success: false, message: "Schedule not found." });
+        res.json({ success: true, message: "Schedule attendance updated." });
+    });
+};
+
 const getActivityLogs = (req, res) => {
     const range = getDateRange(req);
     if (!range) return res.status(400).json({ success: false, message: "Provide a valid date range." });
@@ -110,4 +130,4 @@ const getActivityLogs = (req, res) => {
     });
 };
 
-module.exports = { getReport, getAppointmentDetails, getWorkers, assignAppointment, getSchedules, saveSchedule, deleteSchedule, getActivityLogs };
+module.exports = { getReport, getAppointmentDetails, getWorkers, assignAppointment, getSchedules, saveSchedule, deleteSchedule, updateScheduleAttendance, getActivityLogs };

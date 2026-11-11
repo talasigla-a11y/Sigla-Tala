@@ -9,6 +9,8 @@ const createTables = (callback) => {
             start_time TIME NOT NULL,
             end_time TIME NOT NULL,
             notes VARCHAR(500) NULL,
+            attendance_status VARCHAR(20) NULL,
+            late_hours DECIMAL(5,2) NULL,
             created_by INT NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -32,7 +34,18 @@ const createTables = (callback) => {
 
     db.query(scheduleSql, (scheduleErr) => {
         if (scheduleErr) return callback(scheduleErr);
-        db.query(activitySql, callback);
+        const attendanceColumns = [
+            "ALTER TABLE worker_schedules ADD COLUMN attendance_status VARCHAR(20) NULL",
+            "ALTER TABLE worker_schedules ADD COLUMN late_hours DECIMAL(5,2) NULL"
+        ];
+        const addAttendanceColumn = (index) => {
+            if (index >= attendanceColumns.length) return db.query(activitySql, callback);
+            db.query(attendanceColumns[index], (columnErr) => {
+                if (columnErr && columnErr.code !== "ER_DUP_FIELDNAME") return callback(columnErr);
+                addAttendanceColumn(index + 1);
+            });
+        };
+        addAttendanceColumn(0);
     });
 };
 
@@ -170,6 +183,7 @@ const assignAppointment = (appointmentId, workerId, actorId, callback) => {
 const getSchedules = (from, to, callback) => {
     const sql = `
         SELECT s.id, s.worker_id, s.schedule_date, s.start_time, s.end_time, s.notes,
+               s.attendance_status, s.late_hours,
                u.fullname AS worker_name, u.job_specification
         FROM worker_schedules s
         INNER JOIN users u ON u.id = s.worker_id
@@ -203,12 +217,25 @@ const saveSchedule = (schedule, actorId, callback) => {
 
     const sql = schedule.id
         ? `UPDATE worker_schedules
-           SET worker_id = ?, schedule_date = ?, start_time = ?, end_time = ?, notes = ?, created_by = ?
+           SET attendance_status = CASE WHEN worker_id = ? AND schedule_date = ? THEN attendance_status ELSE NULL END,
+               late_hours = CASE WHEN worker_id = ? AND schedule_date = ? THEN late_hours ELSE NULL END,
+               worker_id = ?, schedule_date = ?, start_time = ?, end_time = ?, notes = ?, created_by = ?
            WHERE id = ?`
         : `INSERT INTO worker_schedules
            (worker_id, schedule_date, start_time, end_time, notes, created_by)
            VALUES (?, ?, ?, ?, ?, ?)`;
-    const values = [
+    const values = schedule.id ? [
+        schedule.worker_id,
+        schedule.schedule_date,
+        schedule.worker_id,
+        schedule.schedule_date,
+        schedule.worker_id,
+        schedule.schedule_date,
+        schedule.start_time,
+        schedule.end_time,
+        schedule.notes || null,
+        actorId
+    ] : [
         schedule.worker_id,
         schedule.schedule_date,
         schedule.start_time,
@@ -235,6 +262,32 @@ const deleteSchedule = (scheduleId, actorId, callback) => {
             if (logErr) return callback(logErr);
             callback(null, true);
         });
+    });
+};
+
+const updateScheduleAttendance = (scheduleId, attendanceStatus, lateHours, actorId, callback) => {
+    db.query("SELECT worker_id, schedule_date FROM worker_schedules WHERE id = ?", [scheduleId], (selectErr, rows) => {
+        if (selectErr) return callback(selectErr);
+        if (!rows.length) return callback(null, false);
+        db.query(
+            "UPDATE worker_schedules SET attendance_status = ?, late_hours = ? WHERE id = ?",
+            [attendanceStatus, lateHours, scheduleId],
+            (updateErr) => {
+                if (updateErr) return callback(updateErr);
+                const lateDetails = attendanceStatus === "late" ? `, ${lateHours} hours late` : "";
+                logActivity(
+                    actorId,
+                    "schedule_attendance_updated",
+                    "worker_schedule",
+                    scheduleId,
+                    `Attendance marked ${attendanceStatus}${lateDetails} for ${rows[0].schedule_date}`,
+                    (logErr) => {
+                        if (logErr) return callback(logErr);
+                        callback(null, true);
+                    }
+                );
+            }
+        );
     });
 };
 
@@ -269,6 +322,7 @@ module.exports = {
     getSchedules,
     saveSchedule,
     deleteSchedule,
+    updateScheduleAttendance,
     logActivity,
     getActivityLogs
 };

@@ -328,7 +328,7 @@ function renderScheduleCalendar() {
         button.classList.toggle("today", key === todayKey);
         button.classList.toggle("has-schedules", count > 0);
         button.setAttribute("aria-label", `${scheduleLabelDate(key)}${count ? `, ${count} worker${count === 1 ? "" : "s"} scheduled` : ", no workers scheduled"}`);
-        button.innerHTML = `<span>${day}</span>${count ? `<small>${count} worker${count === 1 ? "" : "s"}</small>` : ""}`;
+        button.innerHTML = `<span>${day}</span>${count ? `<small>${count} assigned</small>` : ""}`;
         button.addEventListener("click", () => selectScheduleDate(date));
         grid.appendChild(button);
     }
@@ -363,16 +363,16 @@ function renderSelectedDateSchedules() {
     const selected = schedules
         .filter((schedule) => normalizeDate(schedule.schedule_date) === key)
         .sort((a, b) => normalizeTime(a.start_time).localeCompare(normalizeTime(b.start_time)));
-    document.getElementById("scheduleSelectedDateLabel").textContent = scheduleLabelDate(key);
+    document.getElementById("scheduleSelectedDateLabel").textContent = `Scheduled Workers — ${scheduleLabelDate(key)}`;
     const roster = document.getElementById("selectedDateSchedules");
     roster.innerHTML = selected.length
         ? `<div class="schedule-roster-list">${selected.map((schedule) => `
             <article class="schedule-roster-item">
-              <span class="schedule-roster-time">${escapeHtml(normalizeTime(schedule.start_time))}–${escapeHtml(normalizeTime(schedule.end_time))}</span>
-              <div class="schedule-roster-worker"><strong>${escapeHtml(schedule.worker_name)}</strong><span>${escapeHtml(schedule.job_specification || "Health worker")}${schedule.notes ? ` · ${escapeHtml(schedule.notes)}` : ""}</span></div>
+              <span class="schedule-roster-avatar" aria-hidden="true">${escapeHtml(String(schedule.worker_name || "W").trim().charAt(0).toUpperCase())}</span>
+              <div class="schedule-roster-worker"><strong>${escapeHtml(schedule.worker_name)}</strong><span>${escapeHtml(schedule.job_specification || "Health worker")}</span><small>${escapeHtml(normalizeTime(schedule.start_time))}–${escapeHtml(normalizeTime(schedule.end_time))}${schedule.notes ? ` · ${escapeHtml(schedule.notes)}` : ""}</small></div>
               ${scheduleActionButtons(schedule)}
             </article>`).join("")}</div>`
-        : `<div class="schedule-roster-empty"><strong>No workers assigned yet</strong><span>Add workers to build this date’s roster.</span></div>`;
+        : `<div class="schedule-roster-empty"><strong>No workers scheduled</strong><span>No workers are assigned for this date.</span></div>`;
     bindScheduleActions(roster);
 }
 
@@ -424,9 +424,66 @@ function renderSchedules() {
     const table = document.getElementById("scheduleRows");
     table.innerHTML = filtered.length ? filtered.map((schedule) => {
         const hours = `${escapeHtml(normalizeTime(schedule.start_time))}–${escapeHtml(normalizeTime(schedule.end_time))}`;
-        return `<tr><td>${escapeHtml(formatScheduleDate(schedule.schedule_date))}</td><td>${escapeHtml(schedule.worker_name)}</td><td>${escapeHtml(schedule.job_specification || "—")}</td><td>${hours}</td><td>${escapeHtml(schedule.notes || "—")}</td><td>${scheduleActionButtons(schedule)}</td></tr>`;
-    }).join("") : emptyRow(6, "No schedules match the current filters.");
+        const attendanceStatus = String(schedule.attendance_status || "").toLowerCase();
+        const lateValue = attendanceStatus === "late" && schedule.late_hours !== null ? escapeHtml(schedule.late_hours) : "";
+        return `<tr data-schedule-id="${schedule.id}">
+          <td>${escapeHtml(formatScheduleDate(schedule.schedule_date))}</td>
+          <td>${escapeHtml(schedule.worker_name)}</td>
+          <td>${escapeHtml(schedule.job_specification || "—")}</td>
+          <td>${hours}</td>
+          <td>${escapeHtml(schedule.notes || "—")}</td>
+          <td><select class="attendance-status" aria-label="Attendance status for ${escapeHtml(schedule.worker_name)}">
+            <option value="" ${!attendanceStatus ? "selected" : ""}>Not marked</option>
+            <option value="present" ${attendanceStatus === "present" ? "selected" : ""}>Present</option>
+            <option value="absent" ${attendanceStatus === "absent" ? "selected" : ""}>Absent</option>
+            <option value="late" ${attendanceStatus === "late" ? "selected" : ""}>Late</option>
+          </select></td>
+          <td><input class="attendance-late-hours" type="number" min="0.01" max="24" step="0.25" placeholder="Hours" aria-label="Hours late for ${escapeHtml(schedule.worker_name)}" value="${lateValue}" ${attendanceStatus === "late" ? "" : "disabled"}></td>
+          <td><div class="schedule-actions"><button type="button" class="btn-primary btn-compact save-attendance" data-id="${schedule.id}">Save status</button>${scheduleActionButtons(schedule)}</div></td>
+        </tr>`;
+    }).join("") : emptyRow(8, "No schedules match the current filters.");
     bindScheduleActions(table);
+    bindScheduleAttendance(table);
+}
+
+function bindScheduleAttendance(container) {
+    container.querySelectorAll(".attendance-status").forEach((select) => {
+        select.addEventListener("change", () => {
+            const lateHours = select.closest("tr").querySelector(".attendance-late-hours");
+            lateHours.disabled = select.value !== "late";
+            if (select.value !== "late") lateHours.value = "";
+        });
+    });
+    container.querySelectorAll(".save-attendance").forEach((button) => {
+        button.addEventListener("click", async () => {
+            const row = button.closest("tr");
+            const attendanceStatus = row.querySelector(".attendance-status").value;
+            const lateHoursInput = row.querySelector(".attendance-late-hours");
+            const lateHours = lateHoursInput.value;
+            if (!attendanceStatus) {
+                showToast("Select Present, Absent, or Late before saving.", "error");
+                return;
+            }
+            if (attendanceStatus === "late" && (!lateHours || Number(lateHours) <= 0 || Number(lateHours) > 24)) {
+                showToast("Enter late hours greater than 0 and no more than 24.", "error");
+                lateHoursInput.focus();
+                return;
+            }
+            button.disabled = true;
+            try {
+                await request(`/schedules/${button.dataset.id}/attendance`, {
+                    method: "PUT",
+                    body: JSON.stringify({ attendanceStatus, lateHours: attendanceStatus === "late" ? Number(lateHours) : null })
+                });
+                showToast("Attendance saved.");
+                await loadSchedules();
+            } catch (error) {
+                showToast(error.message, "error");
+            } finally {
+                button.disabled = false;
+            }
+        });
+    });
 }
 
 function beginScheduleEdit(scheduleId) {
@@ -439,7 +496,7 @@ function beginScheduleEdit(scheduleId) {
     document.getElementById("scheduleStart").value = String(schedule.start_time).slice(0, 5);
     document.getElementById("scheduleEnd").value = String(schedule.end_time).slice(0, 5);
     document.getElementById("scheduleNotes").value = schedule.notes || "";
-    document.getElementById("scheduleFormTitle").textContent = "Edit worker assignment";
+    document.getElementById("scheduleFormTitle").textContent = "Edit worker schedule";
     document.getElementById("cancelScheduleEditBtn").classList.remove("hidden");
     validateScheduleTime();
     document.getElementById("scheduleForm").scrollIntoView({ behavior: "smooth", block: "center" });
@@ -449,7 +506,7 @@ function resetScheduleForm() {
     editingScheduleId = null;
     document.getElementById("scheduleForm").reset();
     document.getElementById("scheduleDate").value = scheduleDateKey(selectedScheduleDate);
-    document.getElementById("scheduleFormTitle").textContent = "Add worker to selected date";
+    document.getElementById("scheduleFormTitle").textContent = "Set worker schedule";
     document.getElementById("cancelScheduleEditBtn").classList.add("hidden");
     document.getElementById("timeValidationMessage").textContent = "";
 }
@@ -579,6 +636,14 @@ document.getElementById("reloadActivityBtn").addEventListener("click", loadActiv
 document.getElementById("scheduleSearch").addEventListener("input", renderSchedules);
 document.getElementById("scheduleSpecialization").addEventListener("change", renderSchedules);
 document.getElementById("scheduleDateFilter").addEventListener("change", renderSchedules);
+document.getElementById("scheduleDate").addEventListener("change", async (event) => {
+    const [year, month, day] = event.target.value.split("-").map(Number);
+    if (!year || !month || !day) return;
+    selectedScheduleDate = new Date(year, month - 1, day);
+    schedulePlannerDate = new Date(year, month - 1, 1);
+    document.getElementById("scheduleDateFilter").value = "";
+    await loadSchedules();
+});
 document.getElementById("scheduleMonthPrev").addEventListener("click", async () => {
     schedulePlannerDate = new Date(schedulePlannerDate.getFullYear(), schedulePlannerDate.getMonth() - 1, 1);
     selectedScheduleDate = new Date(schedulePlannerDate);

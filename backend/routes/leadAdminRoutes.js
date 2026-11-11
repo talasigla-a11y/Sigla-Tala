@@ -13,6 +13,7 @@ router.get("/schedules", controller.getSchedules);
 router.post("/schedules", controller.saveSchedule);
 router.put("/schedules", controller.saveSchedule);
 router.delete("/schedules/:scheduleId", controller.deleteSchedule);
+router.put("/schedules/:scheduleId/attendance", controller.updateScheduleAttendance);
 router.get("/activity-logs", controller.getActivityLogs);
 
 module.exports = router;
