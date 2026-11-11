@@ -35,10 +35,13 @@
 .selected-date-preview { background: #f0f8f3; border-radius: 8px; margin-top: 16px; padding: 12px; }
 .selected-date-preview p { color: var(--text-muted); font-size: 12px; line-height: 1.4; margin: 0; }
 .selected-date-preview h3 { font-size: 13px; margin: 0 0 8px; }
-.scheduled-worker { border-top: 1px solid #dcebe1; display: grid; gap: 3px; padding: 9px 0 0; }
-.scheduled-worker + .scheduled-worker { margin-top: 9px; }
-.scheduled-worker strong { font-size: 12px; }
-.scheduled-worker span { color: var(--text-muted); font-size: 11px; }
+.availability-slot-list { display: grid; gap: 6px; grid-template-columns: repeat(2, minmax(0, 1fr)); margin-top: 10px; max-height: 210px; overflow-y: auto; }
+.availability-slot { align-items: center; background: #fff; border: 1px solid #d5e7db; border-radius: 6px; color: var(--green-dark); cursor: pointer; display: flex; flex-direction: column; font-size: 11px; gap: 3px; padding: 7px 4px; }
+.availability-slot span { color: #278052; font-size: 10px; }
+.availability-slot:hover:not(:disabled) { background: #e2f3e8; border-color: var(--green); }
+.availability-slot.booked, .availability-slot:disabled { background: #f0f1f1; border-color: #e0e3e3; color: #8a9295; cursor: not-allowed; }
+.availability-slot.booked span, .availability-slot:disabled span { color: #a04444; }
+.availability-hint { color: var(--text-muted); font-size: 12px; margin: 6px 0 0; }
 .quick-actions { display: grid; gap: 8px; }
 .quick-actions .widget-heading { margin-bottom: 5px; }
 .quick-actions button { background: transparent; border: 0; border-bottom: 1px solid #edf0f2; color: var(--text-dark); display: flex; justify-content: space-between; padding: 10px 0; text-align: left; }

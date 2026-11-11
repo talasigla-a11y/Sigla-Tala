@@ -227,6 +227,7 @@ const patientCalendarLabel = document.getElementById("patientCalendarLabel");
 const selectedDatePreview = document.getElementById("selectedDatePreview");
 let patientCalendarDate = new Date();
 let selectedCalendarDate = new Date();
+let availabilityRequestId = 0;
 
 function calendarDateKey(date) {
     const year = date.getFullYear();
@@ -239,23 +240,83 @@ function formatCalendarDate(value) {
     return new Intl.DateTimeFormat(undefined, { month: "long", day: "numeric", year: "numeric" }).format(new Date(`${value}T00:00:00`));
 }
 
-async function loadScheduledWorkers(dateKey) {
-    selectedDatePreview.innerHTML = `<p>Loading scheduled workers for ${escapeHTML(formatCalendarDate(dateKey))}...</p>`;
+function updateAppointmentTimeOptions(bookedTimes, dateKey) {
+    const booked = new Set(bookedTimes);
+    Array.from(appointmentTime.options).forEach((option) => {
+        if (!option.value) return;
+        if (!option.dataset.defaultLabel) {
+            option.dataset.defaultLabel = option.textContent;
+        }
+        const isBooked = booked.has(option.value);
+        option.disabled = isBooked;
+        option.textContent = isBooked
+            ? `${option.dataset.defaultLabel} (Booked)`
+            : option.dataset.defaultLabel;
+    });
+    if (appointmentTime.selectedOptions[0]?.disabled) {
+        appointmentTime.value = "";
+    }
+    appointmentTime.dataset.availabilityDate = dateKey || "";
+    const availabilityHint = document.getElementById("appointmentAvailabilityHint");
+    if (availabilityHint) {
+        availabilityHint.textContent = dateKey
+            ? booked.size
+                ? `${booked.size} time slot${booked.size === 1 ? "" : "s"} already booked.`
+                : "All time slots are currently available."
+            : "Select a date to view available time slots.";
+    }
+}
+
+function renderDateAvailability(dateKey, bookedTimes) {
+    const booked = new Set(bookedTimes);
+    const slots = Array.from(appointmentTime.options).filter((option) => option.value);
+    const availableCount = slots.filter((option) => !booked.has(option.value)).length;
+    selectedDatePreview.innerHTML = `
+        <h3>${escapeHTML(formatCalendarDate(dateKey))}</h3>
+        <p>${availableCount ? `${availableCount} time slots available` : "No time slots available"} · ${booked.size} booked</p>
+        <div class="availability-slot-list">
+            ${slots.map((option) => {
+                const isBooked = booked.has(option.value);
+                return `<button type="button" class="availability-slot${isBooked ? " booked" : ""}" data-time-slot="${escapeHTML(option.value)}"${isBooked ? " disabled" : ""}>${escapeHTML(option.dataset.defaultLabel || option.textContent)}<span>${isBooked ? "Booked" : "Available"}</span></button>`;
+            }).join("")}
+        </div>`;
+}
+
+async function loadDateAvailability(dateKey) {
+    if (!dateKey) {
+        updateAppointmentTimeOptions([], "");
+        selectedDatePreview.innerHTML = "<p>Select a date to view available time slots.</p>";
+        return;
+    }
+
+    const requestId = ++availabilityRequestId;
+    selectedDatePreview.innerHTML = `<p>Loading time availability for ${escapeHTML(formatCalendarDate(dateKey))}...</p>`;
+    Array.from(appointmentTime.options).forEach((option) => {
+        if (option.value) option.disabled = true;
+    });
+    if (appointmentTime.value) appointmentTime.value = "";
+    const availabilityHint = document.getElementById("appointmentAvailabilityHint");
+    if (availabilityHint) availabilityHint.textContent = "Checking available times...";
     try {
         const token = localStorage.getItem("token");
-        const response = await fetch(`${API_BASE_URL}/api/appointments/scheduled-workers?date=${encodeURIComponent(dateKey)}`, {
+        const response = await fetch(`${API_BASE_URL}/api/appointments/availability?date=${encodeURIComponent(dateKey)}`, {
             headers: { Authorization: "Bearer " + token }
         });
         const data = await response.json().catch(() => ({}));
-        if (!response.ok) throw new Error(data.message || "Unable to load the schedule.");
-        if (!data.schedules.length) {
-            selectedDatePreview.innerHTML = `<h3>${escapeHTML(formatCalendarDate(dateKey))}</h3><p>No morning worker is scheduled on this date.</p>`;
-            return;
-        }
-        selectedDatePreview.innerHTML = `<h3>${escapeHTML(formatCalendarDate(dateKey))}</h3>${data.schedules.map((schedule) => `<div class="scheduled-worker"><strong>${escapeHTML(schedule.worker_name)}</strong><span>${escapeHTML(schedule.job_specification || "Health worker")}</span><span>${escapeHTML(schedule.start_time)}–${escapeHTML(schedule.end_time)}</span></div>`).join("")}`;
+        if (!response.ok) throw new Error(data.message || "Unable to load time availability.");
+        if (requestId !== availabilityRequestId) return;
+        const bookedTimes = Array.isArray(data.booked_times)
+            ? data.booked_times.map((time) => String(time).trim())
+            : [];
+        updateAppointmentTimeOptions(bookedTimes, dateKey);
+        renderDateAvailability(dateKey, bookedTimes);
     } catch (error) {
-        console.error("PATIENT SCHEDULE PREVIEW ERROR:", error);
-        selectedDatePreview.innerHTML = "<p>Unable to load the worker schedule. Please try again.</p>";
+        if (requestId !== availabilityRequestId) return;
+        console.error("APPOINTMENT AVAILABILITY ERROR:", error);
+        updateAppointmentTimeOptions(Array.from(appointmentTime.options).filter((option) => option.value).map((option) => option.value), dateKey);
+        const availabilityHint = document.getElementById("appointmentAvailabilityHint");
+        if (availabilityHint) availabilityHint.textContent = "Unable to load time availability.";
+        selectedDatePreview.innerHTML = "<p>Unable to load available times. Please try again.</p>";
     }
 }
 
@@ -281,8 +342,12 @@ function renderPatientCalendar() {
         button.classList.toggle("selected", key === calendarDateKey(selectedCalendarDate));
         button.addEventListener("click", () => {
             selectedCalendarDate = date;
+            if (appointmentDate) {
+                appointmentDate.value = key;
+                updateAppointmentTypeDetails();
+            }
             renderPatientCalendar();
-            loadScheduledWorkers(key);
+            loadDateAvailability(key);
         });
         patientCalendarGrid.appendChild(button);
     }
@@ -299,8 +364,18 @@ document.getElementById("patientCalendarNext").addEventListener("click", () => {
 document.querySelectorAll("[data-patient-view]").forEach((button) => {
     button.addEventListener("click", () => showView(button.dataset.patientView));
 });
+
+selectedDatePreview.addEventListener("click", (event) => {
+    const slotButton = event.target.closest("[data-time-slot]");
+    if (!slotButton || slotButton.disabled) return;
+    const dateKey = calendarDateKey(selectedCalendarDate);
+    appointmentDate.value = dateKey;
+    appointmentTime.value = slotButton.dataset.timeSlot;
+    updateAppointmentTypeDetails();
+    showView("appointment");
+});
 renderPatientCalendar();
-loadScheduledWorkers(calendarDateKey(selectedCalendarDate));
+loadDateAvailability(calendarDateKey(selectedCalendarDate));
 
 
 async function loadAnnouncements() {
@@ -913,7 +988,21 @@ const appointmentTime =
     );
 
 if (appointmentDate) {
-    appointmentDate.addEventListener("change", updateAppointmentTypeDetails);
+    appointmentDate.addEventListener("change", () => {
+        updateAppointmentTypeDetails();
+        if (appointmentDate.value) {
+            selectedCalendarDate = new Date(`${appointmentDate.value}T00:00:00`);
+            patientCalendarDate = new Date(
+                selectedCalendarDate.getFullYear(),
+                selectedCalendarDate.getMonth(),
+                1
+            );
+            renderPatientCalendar();
+            loadDateAvailability(appointmentDate.value);
+        } else {
+            loadDateAvailability("");
+        }
+    });
 }
 
 const appointmentFile =
@@ -1462,6 +1551,11 @@ if (appointmentForm) {
 
 
                 appointmentForm.reset();
+                updateAppointmentTimeOptions([], "");
+                selectedDatePreview.innerHTML = "<p>Select a date to view available time slots.</p>";
+                document.getElementById("appointmentAvailabilityHint").textContent =
+                    "Select a date to view available time slots.";
+                loadAppointments();
 
                 if (otherAppointmentReasonField) {
                     otherAppointmentReasonField.classList.add("hidden");

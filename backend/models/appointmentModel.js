@@ -179,10 +179,24 @@ const getAppointmentByDateAndTime = (appointmentDate, timePreference, callback) 
         FROM appointments
         WHERE appointment_date = ?
           AND time_preference = ?
+          AND LOWER(TRIM(COALESCE(status, ''))) NOT IN ('rejected', 'cancelled')
         LIMIT 1
     `;
 
     db.query(sql, [appointmentDate, timePreference], callback);
+};
+
+const getBookedTimePreferencesByDate = (appointmentDate, callback) => {
+    const sql = `
+        SELECT DISTINCT time_preference
+        FROM appointments
+        WHERE appointment_date = ?
+          AND time_preference IS NOT NULL
+          AND TRIM(time_preference) <> ''
+          AND LOWER(TRIM(COALESCE(status, ''))) NOT IN ('rejected', 'cancelled')
+    `;
+
+    db.query(sql, [appointmentDate], callback);
 };
 
 const createAppointment = (appointment, callback) => {
@@ -506,6 +520,7 @@ module.exports = {
     getScheduledAdminByJobAndDate,
     assignUnassignedAppointmentsByJobSpecification,
     getAppointmentByDateAndTime,
+    getBookedTimePreferencesByDate,
     createAppointment,
     getAppointmentsByUserId,
     getAllAppointments,
