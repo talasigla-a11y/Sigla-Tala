@@ -265,6 +265,8 @@ async function assignAppointment(event) {
 }
 
 async function loadSchedules() {
+    renderScheduleCalendar();
+    renderSelectedDateSchedules();
     try {
         const from = new Date(schedulePlannerDate.getFullYear(), schedulePlannerDate.getMonth(), 1);
         const to = new Date(schedulePlannerDate.getFullYear(), schedulePlannerDate.getMonth() + 1, 0);
@@ -437,7 +439,7 @@ function beginScheduleEdit(scheduleId) {
     document.getElementById("scheduleStart").value = String(schedule.start_time).slice(0, 5);
     document.getElementById("scheduleEnd").value = String(schedule.end_time).slice(0, 5);
     document.getElementById("scheduleNotes").value = schedule.notes || "";
-    document.getElementById("scheduleFormTitle").textContent = "Edit worker schedule";
+    document.getElementById("scheduleFormTitle").textContent = "Edit worker assignment";
     document.getElementById("cancelScheduleEditBtn").classList.remove("hidden");
     validateScheduleTime();
     document.getElementById("scheduleForm").scrollIntoView({ behavior: "smooth", block: "center" });
@@ -447,7 +449,7 @@ function resetScheduleForm() {
     editingScheduleId = null;
     document.getElementById("scheduleForm").reset();
     document.getElementById("scheduleDate").value = scheduleDateKey(selectedScheduleDate);
-    document.getElementById("scheduleFormTitle").textContent = "Set worker schedule";
+    document.getElementById("scheduleFormTitle").textContent = "Add worker to selected date";
     document.getElementById("cancelScheduleEditBtn").classList.add("hidden");
     document.getElementById("timeValidationMessage").textContent = "";
 }
@@ -577,14 +579,6 @@ document.getElementById("reloadActivityBtn").addEventListener("click", loadActiv
 document.getElementById("scheduleSearch").addEventListener("input", renderSchedules);
 document.getElementById("scheduleSpecialization").addEventListener("change", renderSchedules);
 document.getElementById("scheduleDateFilter").addEventListener("change", renderSchedules);
-document.getElementById("scheduleDate").addEventListener("change", async (event) => {
-    const [year, month, day] = event.target.value.split("-").map(Number);
-    if (!year || !month || !day) return;
-    selectedScheduleDate = new Date(year, month - 1, day);
-    schedulePlannerDate = new Date(year, month - 1, 1);
-    document.getElementById("scheduleDateFilter").value = "";
-    await loadSchedules();
-});
 document.getElementById("scheduleMonthPrev").addEventListener("click", async () => {
     schedulePlannerDate = new Date(schedulePlannerDate.getFullYear(), schedulePlannerDate.getMonth() - 1, 1);
     selectedScheduleDate = new Date(schedulePlannerDate);
@@ -606,11 +600,6 @@ document.getElementById("plannerTodayBtn").addEventListener("click", async () =>
     document.getElementById("scheduleDate").value = scheduleDateKey(selectedScheduleDate);
     document.getElementById("scheduleDateFilter").value = "";
     await loadSchedules();
-});
-document.getElementById("addWorkerToDateBtn").addEventListener("click", () => {
-    resetScheduleForm();
-    document.getElementById("scheduleForm").scrollIntoView({ behavior: "smooth", block: "center" });
-    document.getElementById("scheduleWorker").focus({ preventScroll: true });
 });
 document.getElementById("printScheduleBtn").addEventListener("click", printSelectedDateSchedule);
 document.getElementById("scheduleStart").addEventListener("change", validateScheduleTime);
@@ -651,5 +640,7 @@ document.getElementById("scheduleForm").addEventListener("submit", async (event)
     }
 });
 
+renderScheduleCalendar();
+renderSelectedDateSchedules();
 loadWorkers();
 loadReport();
