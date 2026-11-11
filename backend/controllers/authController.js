@@ -2,6 +2,7 @@ const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const userModel = require("../models/userModel");
 const appointmentModel = require("../models/appointmentModel");
+const leadAdminModel = require("../models/leadAdminModel");
 const sendOTP = require("../utils/sendEmail");
 
 const ADMIN_JOB_SPECIFICATIONS = [
@@ -498,6 +499,19 @@ const updateProfile = (req, res) => {
                 role: req.user.role,
                 job_specification: null
             };
+
+            if (["worker", "admin", "lead-admin"].includes(String(req.user.role || "").toLowerCase())) {
+                leadAdminModel.logActivity(
+                    req.user.id,
+                    "staff_profile_updated",
+                    "user",
+                    req.user.id,
+                    "Staff profile updated",
+                    (logErr) => {
+                        if (logErr) console.error("STAFF PROFILE ACTIVITY LOG ERROR:", logErr);
+                    }
+                );
+            }
 
             return res.status(200).json({
                 success: true,

@@ -7,6 +7,8 @@ let reportData = { appointments: [] };
 let workers = [];
 let schedules = [];
 let editingScheduleId = null;
+let schedulePlannerDate = new Date();
+let selectedScheduleDate = new Date();
 const MORNING_START = "07:00";
 const MORNING_END = "17:00";
 let reportPage = 1;
@@ -41,7 +43,7 @@ const today = new Date().toISOString().slice(0, 10);
 const firstOfMonth = `${today.slice(0, 8)}01`;
 document.getElementById("fromDate").value = firstOfMonth;
 document.getElementById("toDate").value = today;
-document.getElementById("scheduleDate").value = today;
+document.getElementById("scheduleDate").value = scheduleDateKey(new Date());
 
 function showToast(message, type = "success") {
     clearTimeout(toastTimer);
@@ -264,11 +266,129 @@ async function assignAppointment(event) {
 
 async function loadSchedules() {
     try {
-        const data = await request(`/schedules${rangeQuery()}`);
+        const from = new Date(schedulePlannerDate.getFullYear(), schedulePlannerDate.getMonth(), 1);
+        const to = new Date(schedulePlannerDate.getFullYear(), schedulePlannerDate.getMonth() + 1, 0);
+        const dateKey = (date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+        const data = await request(`/schedules?from=${dateKey(from)}&to=${dateKey(to)}`);
         schedules = data.schedules || [];
         populateSpecializations();
         renderSchedules();
+        renderScheduleCalendar();
+        renderSelectedDateSchedules();
     } catch (error) { showToast(error.message, "error"); }
+}
+
+function scheduleDateKey(date) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+}
+
+function scheduleLabelDate(value, options = { weekday: "long", year: "numeric", month: "long", day: "numeric" }) {
+    const datePart = normalizeDate(value);
+    const [year, month, day] = datePart.split("-").map(Number);
+    return new Intl.DateTimeFormat(undefined, options).format(new Date(year, month - 1, day));
+}
+
+function renderScheduleCalendar() {
+    const year = schedulePlannerDate.getFullYear();
+    const month = schedulePlannerDate.getMonth();
+    const grid = document.getElementById("scheduleCalendarGrid");
+    document.getElementById("scheduleMonthLabel").textContent =
+        new Intl.DateTimeFormat(undefined, { month: "long", year: "numeric" }).format(schedulePlannerDate);
+    grid.replaceChildren();
+
+    const firstDay = new Date(year, month, 1).getDay();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const scheduleCounts = new Map();
+    schedules.forEach((schedule) => {
+        const date = normalizeDate(schedule.schedule_date);
+        scheduleCounts.set(date, (scheduleCounts.get(date) || 0) + 1);
+    });
+
+    for (let index = 0; index < firstDay; index += 1) {
+        const blank = document.createElement("span");
+        blank.className = "schedule-calendar-blank";
+        grid.appendChild(blank);
+    }
+
+    const todayKey = scheduleDateKey(new Date());
+    const selectedKey = scheduleDateKey(selectedScheduleDate);
+    for (let day = 1; day <= daysInMonth; day += 1) {
+        const date = new Date(year, month, day);
+        const key = scheduleDateKey(date);
+        const count = scheduleCounts.get(key) || 0;
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "schedule-calendar-day";
+        button.classList.toggle("selected", key === selectedKey);
+        button.classList.toggle("today", key === todayKey);
+        button.classList.toggle("has-schedules", count > 0);
+        button.setAttribute("aria-label", `${scheduleLabelDate(key)}${count ? `, ${count} worker${count === 1 ? "" : "s"} scheduled` : ", no workers scheduled"}`);
+        button.innerHTML = `<span>${day}</span>${count ? `<small>${count} worker${count === 1 ? "" : "s"}</small>` : ""}`;
+        button.addEventListener("click", () => selectScheduleDate(date));
+        grid.appendChild(button);
+    }
+}
+
+function selectScheduleDate(date) {
+    selectedScheduleDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    schedulePlannerDate = new Date(date.getFullYear(), date.getMonth(), 1);
+    const key = scheduleDateKey(selectedScheduleDate);
+    document.getElementById("scheduleDate").value = key;
+    document.getElementById("scheduleDateFilter").value = "";
+    renderScheduleCalendar();
+    renderSelectedDateSchedules();
+    renderSchedules();
+}
+
+function scheduleActionButtons(schedule) {
+    return `<div class="schedule-actions"><button type="button" class="btn-secondary btn-compact edit-schedule" data-id="${schedule.id}">Edit</button><button type="button" class="btn-danger btn-compact delete-schedule" data-id="${schedule.id}">Delete</button></div>`;
+}
+
+function bindScheduleActions(container) {
+    container.querySelectorAll(".edit-schedule").forEach((button) => {
+        button.addEventListener("click", () => beginScheduleEdit(Number(button.dataset.id)));
+    });
+    container.querySelectorAll(".delete-schedule").forEach((button) => {
+        button.addEventListener("click", () => removeSchedule(Number(button.dataset.id)));
+    });
+}
+
+function renderSelectedDateSchedules() {
+    const key = scheduleDateKey(selectedScheduleDate);
+    const selected = schedules
+        .filter((schedule) => normalizeDate(schedule.schedule_date) === key)
+        .sort((a, b) => normalizeTime(a.start_time).localeCompare(normalizeTime(b.start_time)));
+    document.getElementById("scheduleSelectedDateLabel").textContent = scheduleLabelDate(key);
+    const roster = document.getElementById("selectedDateSchedules");
+    roster.innerHTML = selected.length
+        ? `<div class="schedule-roster-list">${selected.map((schedule) => `
+            <article class="schedule-roster-item">
+              <span class="schedule-roster-time">${escapeHtml(normalizeTime(schedule.start_time))}–${escapeHtml(normalizeTime(schedule.end_time))}</span>
+              <div class="schedule-roster-worker"><strong>${escapeHtml(schedule.worker_name)}</strong><span>${escapeHtml(schedule.job_specification || "Health worker")}${schedule.notes ? ` · ${escapeHtml(schedule.notes)}` : ""}</span></div>
+              ${scheduleActionButtons(schedule)}
+            </article>`).join("")}</div>`
+        : `<div class="schedule-roster-empty"><strong>No workers assigned yet</strong><span>Add workers to build this date’s roster.</span></div>`;
+    bindScheduleActions(roster);
+}
+
+function printSelectedDateSchedule() {
+    const key = scheduleDateKey(selectedScheduleDate);
+    const selected = schedules
+        .filter((schedule) => normalizeDate(schedule.schedule_date) === key)
+        .sort((a, b) => normalizeTime(a.start_time).localeCompare(normalizeTime(b.start_time)));
+    const rows = selected.length
+        ? selected.map((schedule) => `<tr><td>${escapeHtml(normalizeTime(schedule.start_time))}–${escapeHtml(normalizeTime(schedule.end_time))}</td><td>${escapeHtml(schedule.worker_name)}</td><td>${escapeHtml(schedule.job_specification || "Health worker")}</td><td>${escapeHtml(schedule.notes || "—")}</td></tr>`).join("")
+        : `<tr><td colspan="4">No workers are assigned for this date.</td></tr>`;
+    const printSheet = document.getElementById("schedulePrintSheet");
+    printSheet.innerHTML = `
+        <header class="schedule-print-header"><div class="schedule-print-logo">S</div><div><h1>Sigla Tala</h1><p>Barangay Health Care Center · Worker Duty Roster</p></div></header>
+        <h2>Daily Worker Schedule</h2><p class="schedule-print-date">${escapeHtml(scheduleLabelDate(key))}</p>
+        <table><thead><tr><th>Duty hours</th><th>Worker</th><th>Specialization</th><th>Notes</th></tr></thead><tbody>${rows}</tbody></table>
+        <footer class="schedule-print-footer"><span>Prepared by: __________________________</span><span>Printed on: ${escapeHtml(new Date().toLocaleDateString())}</span></footer>`;
+    window.print();
 }
 
 function populateSpecializations() {
@@ -299,12 +419,12 @@ function renderSchedules() {
             endTime <= MORNING_END &&
             startTime < endTime;
     });
-    document.getElementById("scheduleRows").innerHTML = filtered.length ? filtered.map((schedule) => {
+    const table = document.getElementById("scheduleRows");
+    table.innerHTML = filtered.length ? filtered.map((schedule) => {
         const hours = `${escapeHtml(normalizeTime(schedule.start_time))}–${escapeHtml(normalizeTime(schedule.end_time))}`;
-        return `<tr><td>${escapeHtml(formatScheduleDate(schedule.schedule_date))}</td><td>${escapeHtml(schedule.worker_name)}</td><td>${escapeHtml(schedule.job_specification || "—")}</td><td>${hours}</td><td>${escapeHtml(schedule.notes || "—")}</td><td class="schedule-actions"><button type="button" class="btn-secondary btn-compact edit-schedule" data-id="${schedule.id}">Edit</button><button type="button" class="btn-danger btn-compact delete-schedule" data-id="${schedule.id}">Delete</button></td></tr>`;
+        return `<tr><td>${escapeHtml(formatScheduleDate(schedule.schedule_date))}</td><td>${escapeHtml(schedule.worker_name)}</td><td>${escapeHtml(schedule.job_specification || "—")}</td><td>${hours}</td><td>${escapeHtml(schedule.notes || "—")}</td><td>${scheduleActionButtons(schedule)}</td></tr>`;
     }).join("") : emptyRow(6, "No schedules match the current filters.");
-    document.querySelectorAll(".edit-schedule").forEach((button) => button.addEventListener("click", () => beginScheduleEdit(Number(button.dataset.id))));
-    document.querySelectorAll(".delete-schedule").forEach((button) => button.addEventListener("click", () => removeSchedule(Number(button.dataset.id))));
+    bindScheduleActions(table);
 }
 
 function beginScheduleEdit(scheduleId) {
@@ -313,6 +433,7 @@ function beginScheduleEdit(scheduleId) {
     editingScheduleId = scheduleId;
     document.getElementById("scheduleWorker").value = schedule.worker_id;
     document.getElementById("scheduleDate").value = String(schedule.schedule_date).slice(0, 10);
+    selectScheduleDate(new Date(`${normalizeDate(schedule.schedule_date)}T00:00:00`));
     document.getElementById("scheduleStart").value = String(schedule.start_time).slice(0, 5);
     document.getElementById("scheduleEnd").value = String(schedule.end_time).slice(0, 5);
     document.getElementById("scheduleNotes").value = schedule.notes || "";
@@ -325,7 +446,7 @@ function beginScheduleEdit(scheduleId) {
 function resetScheduleForm() {
     editingScheduleId = null;
     document.getElementById("scheduleForm").reset();
-    document.getElementById("scheduleDate").value = document.getElementById("toDate").value;
+    document.getElementById("scheduleDate").value = scheduleDateKey(selectedScheduleDate);
     document.getElementById("scheduleFormTitle").textContent = "Set worker schedule";
     document.getElementById("cancelScheduleEditBtn").classList.add("hidden");
     document.getElementById("timeValidationMessage").textContent = "";
@@ -363,7 +484,7 @@ function validateScheduleTime() {
 async function loadActivity() {
     try {
         const data = await request(`/activity-logs${rangeQuery()}`);
-        document.getElementById("activityRows").innerHTML = data.logs.length ? data.logs.map((log) => `<tr><td>${escapeHtml(formatDateTime(log.created_at))}</td><td>${escapeHtml(log.actor_name || "System")}</td><td>${escapeHtml(log.action)}</td><td>${escapeHtml(log.entity_type)} #${escapeHtml(log.entity_id || "—")}</td><td>${escapeHtml(log.details || "—")}</td></tr>`).join("") : emptyRow(5);
+        document.getElementById("activityRows").innerHTML = data.logs.length ? data.logs.map((log) => `<tr><td>${escapeHtml(formatDateTime(log.created_at))}</td><td>${escapeHtml(log.actor_name || "System")}</td><td>${escapeHtml(log.actor_role || "System")}</td><td>${escapeHtml(log.action)}</td><td>${escapeHtml(log.entity_type)} #${escapeHtml(log.entity_id || "—")}</td><td>${escapeHtml(log.details || "—")}</td></tr>`).join("") : emptyRow(6);
     } catch (error) { showToast(error.message, "error"); }
 }
 
@@ -456,6 +577,42 @@ document.getElementById("reloadActivityBtn").addEventListener("click", loadActiv
 document.getElementById("scheduleSearch").addEventListener("input", renderSchedules);
 document.getElementById("scheduleSpecialization").addEventListener("change", renderSchedules);
 document.getElementById("scheduleDateFilter").addEventListener("change", renderSchedules);
+document.getElementById("scheduleDate").addEventListener("change", async (event) => {
+    const [year, month, day] = event.target.value.split("-").map(Number);
+    if (!year || !month || !day) return;
+    selectedScheduleDate = new Date(year, month - 1, day);
+    schedulePlannerDate = new Date(year, month - 1, 1);
+    document.getElementById("scheduleDateFilter").value = "";
+    await loadSchedules();
+});
+document.getElementById("scheduleMonthPrev").addEventListener("click", async () => {
+    schedulePlannerDate = new Date(schedulePlannerDate.getFullYear(), schedulePlannerDate.getMonth() - 1, 1);
+    selectedScheduleDate = new Date(schedulePlannerDate);
+    document.getElementById("scheduleDate").value = scheduleDateKey(selectedScheduleDate);
+    document.getElementById("scheduleDateFilter").value = "";
+    await loadSchedules();
+});
+document.getElementById("scheduleMonthNext").addEventListener("click", async () => {
+    schedulePlannerDate = new Date(schedulePlannerDate.getFullYear(), schedulePlannerDate.getMonth() + 1, 1);
+    selectedScheduleDate = new Date(schedulePlannerDate);
+    document.getElementById("scheduleDate").value = scheduleDateKey(selectedScheduleDate);
+    document.getElementById("scheduleDateFilter").value = "";
+    await loadSchedules();
+});
+document.getElementById("plannerTodayBtn").addEventListener("click", async () => {
+    const now = new Date();
+    schedulePlannerDate = new Date(now.getFullYear(), now.getMonth(), 1);
+    selectedScheduleDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    document.getElementById("scheduleDate").value = scheduleDateKey(selectedScheduleDate);
+    document.getElementById("scheduleDateFilter").value = "";
+    await loadSchedules();
+});
+document.getElementById("addWorkerToDateBtn").addEventListener("click", () => {
+    resetScheduleForm();
+    document.getElementById("scheduleForm").scrollIntoView({ behavior: "smooth", block: "center" });
+    document.getElementById("scheduleWorker").focus({ preventScroll: true });
+});
+document.getElementById("printScheduleBtn").addEventListener("click", printSelectedDateSchedule);
 document.getElementById("scheduleStart").addEventListener("change", validateScheduleTime);
 document.getElementById("scheduleEnd").addEventListener("change", validateScheduleTime);
 document.querySelectorAll(".shift-template").forEach((button) => button.addEventListener("click", () => {
@@ -482,6 +639,9 @@ document.getElementById("scheduleForm").addEventListener("submit", async (event)
     try {
         const schedule = { scheduleId: editingScheduleId, workerId: document.getElementById("scheduleWorker").value, scheduleDate: document.getElementById("scheduleDate").value, startTime: document.getElementById("scheduleStart").value, endTime: document.getElementById("scheduleEnd").value, notes: document.getElementById("scheduleNotes").value };
         await request("/schedules", { method: editingScheduleId ? "PUT" : "POST", body: JSON.stringify(schedule) });
+        const [year, month, day] = schedule.scheduleDate.split("-").map(Number);
+        selectedScheduleDate = new Date(year, month - 1, day);
+        schedulePlannerDate = new Date(year, month - 1, 1);
         showToast("Worker schedule saved.");
         resetScheduleForm();
         await loadSchedules();

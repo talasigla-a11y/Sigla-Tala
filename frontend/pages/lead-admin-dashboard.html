@@ -102,7 +102,32 @@
   </section>
 
   <section id="schedulesPanel" class="lead-panel hidden">
-    <div class="lead-card"><div class="card-heading"><div><h2 id="scheduleFormTitle">Set worker schedule</h2><p class="field-hint">Morning shifts are limited to 7:00 AM–5:00 PM.</p></div><button class="btn-secondary btn-compact hidden" id="cancelScheduleEditBtn" type="button">Cancel edit</button></div>
+    <div class="lead-card schedule-planner-card">
+      <div class="card-heading">
+        <div><h2>Worker schedule planner</h2><p class="field-hint">Choose a date to see assigned workers. Select a day to add or print its schedule.</p></div>
+        <div class="schedule-planner-actions">
+          <button class="btn-secondary btn-compact" id="plannerTodayBtn" type="button">Today</button>
+          <button class="btn-secondary btn-compact" id="printScheduleBtn" type="button">Print selected date</button>
+        </div>
+      </div>
+      <div class="schedule-planner-layout">
+        <div class="schedule-month-view">
+          <div class="schedule-calendar-toolbar">
+            <button type="button" class="btn-secondary btn-compact" id="scheduleMonthPrev" aria-label="Previous month">‹</button>
+            <h3 id="scheduleMonthLabel"></h3>
+            <button type="button" class="btn-secondary btn-compact" id="scheduleMonthNext" aria-label="Next month">›</button>
+          </div>
+          <div class="schedule-calendar-weekdays" aria-hidden="true"><span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span></div>
+          <div class="schedule-calendar-grid" id="scheduleCalendarGrid"></div>
+          <p class="schedule-calendar-legend"><span></span>Scheduled workers</p>
+        </div>
+        <section class="schedule-day-roster" aria-live="polite">
+          <div class="schedule-roster-heading"><div><p class="eyebrow">Daily assignments</p><h3 id="scheduleSelectedDateLabel"></h3></div><button class="btn-primary btn-compact" id="addWorkerToDateBtn" type="button">+ Add worker</button></div>
+          <div id="selectedDateSchedules"></div>
+        </section>
+      </div>
+    </div>
+    <div class="lead-card schedule-form-card"><div class="card-heading"><div><h2 id="scheduleFormTitle">Set worker schedule</h2><p class="field-hint">Morning shifts are limited to 7:00 AM–5:00 PM.</p></div><button class="btn-secondary btn-compact hidden" id="cancelScheduleEditBtn" type="button">Cancel edit</button></div>
       <form id="scheduleForm" class="schedule-form">
         <label>Worker<select id="scheduleWorker" required></select></label>
         <label>Date<input id="scheduleDate" type="date" required></label>
@@ -112,17 +137,18 @@
         <button class="btn-primary btn-compact" type="submit">Save schedule</button>
       </form>
     </div>
-    <div class="lead-card"><div class="card-heading"><div><h2>Scheduled workers</h2><p class="field-hint">Morning schedules only, from 7:00 AM to 5:00 PM. Search and filter the table in real time.</p></div><div class="schedule-filters"><input id="scheduleSearch" type="search" placeholder="Search workers..."><select id="scheduleSpecialization"><option value="">All specializations</option></select><label class="schedule-date-filter">Date<input id="scheduleDateFilter" type="date"></label></div></div><div class="table-wrap"><table><thead><tr><th>Date</th><th>Worker</th><th>Specialization</th><th>Hours</th><th>Notes</th><th>Actions</th></tr></thead><tbody id="scheduleRows"></tbody></table></div></div>
+    <div class="lead-card"><div class="card-heading"><div><h2>Scheduled workers</h2><p class="field-hint">Browse schedules in the selected month; use search and specialization filters as needed.</p></div><div class="schedule-filters"><input id="scheduleSearch" type="search" placeholder="Search workers..."><select id="scheduleSpecialization"><option value="">All specializations</option></select><label class="schedule-date-filter">Date<input id="scheduleDateFilter" type="date"></label></div></div><div class="table-wrap"><table><thead><tr><th>Date</th><th>Worker</th><th>Specialization</th><th>Hours</th><th>Notes</th><th>Actions</th></tr></thead><tbody id="scheduleRows"></tbody></table></div></div>
   </section>
 
   <section id="activityPanel" class="lead-panel hidden">
-    <div class="lead-card"><div class="card-heading"><h2>Worker activity log</h2><button class="btn-secondary btn-compact" id="reloadActivityBtn" type="button">Refresh</button></div>
-      <div class="table-wrap"><table><thead><tr><th>Time</th><th>Actor</th><th>Action</th><th>Entity</th><th>Details</th></tr></thead><tbody id="activityRows"></tbody></table></div>
+    <div class="lead-card"><div class="card-heading"><h2>Staff activity log</h2><button class="btn-secondary btn-compact" id="reloadActivityBtn" type="button">Refresh</button></div>
+      <div class="table-wrap"><table><thead><tr><th>Time</th><th>Staff member</th><th>Role</th><th>Action</th><th>Entity</th><th>Details</th></tr></thead><tbody id="activityRows"></tbody></table></div>
     </div>
   </section>
     </div>
   </div>
 </main>
+<section id="schedulePrintSheet" class="schedule-print-sheet" aria-hidden="true"></section>
 <aside class="detail-drawer hidden" id="appointmentDrawer" aria-hidden="true">
   <div class="drawer-header"><div><p class="eyebrow">Appointment details</p><h2 id="drawerTitle">Patient history</h2></div><button class="drawer-close" id="drawerCloseBtn" type="button" aria-label="Close details">×</button></div>
   <div id="drawerContent" class="drawer-content"></div>

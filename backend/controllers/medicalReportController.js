@@ -242,6 +242,16 @@ const resendReport = async (req, res) => {
 
         try {
             await sendMedicalReport(report.patient_email, report.patient_name, report);
+            leadAdminModel.logActivity(
+                req.user.id,
+                "medical_report_resent",
+                "medical_report",
+                reportId,
+                "Medical report resent to patient",
+                (logErr) => {
+                    if (logErr) console.error("MEDICAL REPORT RESEND ACTIVITY LOG ERROR:", logErr);
+                }
+            );
             return res.json({ success: true, message: `Medical report emailed to ${report.patient_email}.` });
         } catch (emailError) {
             console.error("RESEND MEDICAL REPORT EMAIL ERROR:", emailError);

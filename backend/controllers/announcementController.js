@@ -1,4 +1,5 @@
 const announcementModel = require("../models/announcementModel");
+const leadAdminModel = require("../models/leadAdminModel");
 
 const getAnnouncements = (req, res) => {
     announcementModel.getAllAnnouncements((err, results) => {
@@ -37,6 +38,17 @@ const createAnnouncement = (req, res) => {
             });
         }
 
+        leadAdminModel.logActivity(
+            req.user.id,
+            "announcement_created",
+            "announcement",
+            result.insertId,
+            "Center announcement posted",
+            (logErr) => {
+                if (logErr) console.error("ANNOUNCEMENT ACTIVITY LOG ERROR:", logErr);
+            }
+        );
+
         return res.status(201).json({
             success: true,
             announcement: {
@@ -64,6 +76,17 @@ const deleteAnnouncement = (req, res) => {
                 message: "Announcement not found."
             });
         }
+
+        leadAdminModel.logActivity(
+            req.user.id,
+            "announcement_deleted",
+            "announcement",
+            Number(req.params.id),
+            "Center announcement deleted",
+            (logErr) => {
+                if (logErr) console.error("ANNOUNCEMENT ACTIVITY LOG ERROR:", logErr);
+            }
+        );
 
         return res.status(200).json({ success: true });
     });

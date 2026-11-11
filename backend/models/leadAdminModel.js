@@ -249,7 +249,7 @@ const logActivity = (actorId, action, entityType, entityId, details, callback) =
 const getActivityLogs = (from, to, callback) => {
     const sql = `
         SELECT l.id, l.action, l.entity_type, l.entity_id, l.details, l.created_at,
-               u.fullname AS actor_name, u.email AS actor_email
+               u.fullname AS actor_name, u.email AS actor_email, u.role AS actor_role
         FROM activity_logs l
         LEFT JOIN users u ON u.id = l.actor_id
         WHERE DATE(l.created_at) BETWEEN ? AND ?

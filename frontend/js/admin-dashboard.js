@@ -380,17 +380,23 @@ function renderAnnouncements() {
   announcementGrid.querySelectorAll('.card-delete-btn').forEach((btn) => {
     btn.addEventListener('click', async () => {
       try {
+        const token = localStorage.getItem('token');
+        if (!token || localStorage.getItem('demoWorker') === 'true' || localStorage.getItem('demoAdmin') === 'true') {
+          throw new Error('Sign in as a health worker to delete announcements.');
+        }
         const response = await fetch(`${API_BASE_URL}/api/announcements/${btn.dataset.id}`, {
           method: 'DELETE',
+          headers: { Authorization: `Bearer ${token}` },
         });
+        const data = await response.json().catch(() => ({}));
 
-        if (!response.ok) throw new Error('Failed to delete announcement.');
+        if (!response.ok) throw new Error(data.message || 'Failed to delete announcement.');
 
         await loadAnnouncements();
         showToast('Announcement deleted.', 'success');
       } catch (error) {
         console.error('ANNOUNCEMENT DELETE ERROR:', error);
-        showToast('Failed to delete announcement.', 'error');
+        showToast(error.message || 'Failed to delete announcement.', 'error');
       }
     });
   });
@@ -486,11 +492,14 @@ announcementForm.addEventListener('submit', async (e) => {
   const isDemoMode = localStorage.getItem('demoWorker') === 'true' || localStorage.getItem('demoAdmin') === 'true';
 
   try {
+    if (!token || isDemoMode) {
+      throw new Error('Sign in as a health worker to post announcements.');
+    }
     const response = await fetch(`${API_BASE_URL}/api/announcements`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        ...(token && !isDemoMode ? { Authorization: `Bearer ${token}` } : {}),
+        Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify({
         title: titleEl.value.trim(),
@@ -507,7 +516,7 @@ announcementForm.addEventListener('submit', async (e) => {
     showToast('Announcement posted!', 'success');
   } catch (error) {
     console.error('ANNOUNCEMENT CREATE ERROR:', error);
-    showToast('Failed to post announcement.', 'error');
+    showToast(error.message || 'Failed to post announcement.', 'error');
   }
 });
  
