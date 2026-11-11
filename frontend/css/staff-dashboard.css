@@ -1,0 +1,30 @@
+.staff-app-content { margin: 0 auto; max-width: 1540px; padding: 28px 24px 48px; }
+.staff-dashboard-shell { grid-template-columns: 220px minmax(0, 1fr); }
+.staff-main { min-width: 0; }
+.staff-main .view { padding: 0; }
+.staff-main .view-title { margin-top: 0; }
+.staff-main .lead-admin-title-row { margin-bottom: 22px; }
+.lead-admin-page.staff-app-content { max-width: 1540px; padding: 28px 24px 48px; }
+.lead-admin-page .staff-dashboard-shell { max-width: none; }
+.lead-admin-page .lead-admin-title-row { display: block; }
+.lead-admin-page .lead-admin-tabs { align-content: start; border: 0; display: grid; gap: 5px; margin: 18px 0 0; overflow: visible; }
+.lead-admin-page .lead-admin-tabs .lead-tab { border: 0; justify-content: flex-start; text-align: left; white-space: normal; }
+.lead-admin-page .lead-admin-tabs .lead-tab.active { border: 0; }
+.lead-admin-page .user-dropdown-item { width: 100%; }
+@media (max-width: 1100px) {
+  .staff-dashboard-shell { grid-template-columns: 190px minmax(0, 1fr); }
+  .lead-admin-page.staff-app-content { padding: 24px 18px 40px; }
+}
+@media (max-width: 760px) {
+  .staff-app-content, .lead-admin-page.staff-app-content { padding: 20px 14px 32px; }
+  .staff-dashboard-shell { display: block; }
+  .staff-dashboard-shell .patient-sidebar { margin-bottom: 16px; min-height: 0; }
+  .staff-dashboard-shell .patient-nav { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .staff-dashboard-shell .patient-nav-item { justify-content: center; padding: 9px 5px; text-align: center; }
+  .staff-dashboard-shell .patient-sidebar-note { display: none; }
+  .lead-admin-page .lead-admin-tabs { margin-top: 12px; }
+}
+@media (max-width: 520px) {
+  .staff-dashboard-shell .patient-nav { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .staff-dashboard-shell .patient-nav-item { justify-content: flex-start; text-align: left; }
+}

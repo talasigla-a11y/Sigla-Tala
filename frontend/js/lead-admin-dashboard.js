@@ -18,6 +18,25 @@ if (!token || role !== "lead-admin") {
 }
 
 document.getElementById("leadAdminName").textContent = user && user.fullname ? user.fullname : "Lead Admin";
+const leadAdminUserMenu = document.getElementById("leadAdminUserMenu");
+const leadAdminMenuTrigger = document.getElementById("leadAdminMenuTrigger");
+const leadAdminUserDropdown = document.getElementById("leadAdminUserDropdown");
+
+leadAdminMenuTrigger.addEventListener("click", (event) => {
+    event.stopPropagation();
+    const isOpen = !leadAdminUserDropdown.classList.contains("hidden");
+    leadAdminUserDropdown.classList.toggle("hidden", isOpen);
+    leadAdminUserMenu.classList.toggle("open", !isOpen);
+    leadAdminMenuTrigger.setAttribute("aria-expanded", String(!isOpen));
+});
+
+document.addEventListener("click", (event) => {
+    if (!leadAdminUserMenu.contains(event.target)) {
+        leadAdminUserDropdown.classList.add("hidden");
+        leadAdminUserMenu.classList.remove("open");
+        leadAdminMenuTrigger.setAttribute("aria-expanded", "false");
+    }
+});
 const today = new Date().toISOString().slice(0, 10);
 const firstOfMonth = `${today.slice(0, 8)}01`;
 document.getElementById("fromDate").value = firstOfMonth;
@@ -448,6 +467,10 @@ document.getElementById("cancelScheduleEditBtn").addEventListener("click", reset
 document.getElementById("logoutBtn").addEventListener("click", () => { localStorage.removeItem("token"); localStorage.removeItem("user"); window.location.replace("../pages/login.html"); });
 document.querySelectorAll(".lead-tab").forEach((tab) => tab.addEventListener("click", async () => {
     document.querySelectorAll(".lead-tab").forEach((item) => item.classList.toggle("active", item === tab));
+    tab.setAttribute("aria-selected", "true");
+    document.querySelectorAll(".lead-tab").forEach((item) => {
+        if (item !== tab) item.setAttribute("aria-selected", "false");
+    });
     document.querySelectorAll(".lead-panel").forEach((panel) => panel.classList.toggle("hidden", panel.id !== tab.dataset.panel));
     if (tab.dataset.panel === "assignmentsPanel") await loadAssignments();
     if (tab.dataset.panel === "schedulesPanel") await loadSchedules();

@@ -177,7 +177,7 @@ function showView(viewKey) {
   Object.entries(views).forEach(([key, el]) => {
     el.classList.toggle('hidden', key !== viewKey);
   });
-  document.querySelectorAll('.user-dropdown-item[data-view]').forEach((btn) => {
+  document.querySelectorAll('.user-dropdown-item[data-view], .staff-nav-item[data-view]').forEach((btn) => {
     btn.classList.toggle('active', btn.dataset.view === viewKey);
   });
   closeUserDropdown();
@@ -214,7 +214,7 @@ document.addEventListener('click', (e) => {
   if (!userMenu.contains(e.target)) closeUserDropdown();
 });
  
-document.querySelectorAll('.user-dropdown-item[data-view]').forEach((btn) => {
+document.querySelectorAll('.user-dropdown-item[data-view], .staff-nav-item[data-view]').forEach((btn) => {
   btn.addEventListener('click', () => showView(btn.dataset.view));
 });
 

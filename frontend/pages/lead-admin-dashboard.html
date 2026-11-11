@@ -5,33 +5,46 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Sigla Tala — Lead Admin Dashboard</title>
 <link rel="stylesheet" href="../css/styles.css">
+<link rel="stylesheet" href="../css/patient-dashboard.css">
 <link rel="stylesheet" href="../css/lead-admin-dashboard.css">
+<link rel="stylesheet" href="../css/staff-dashboard.css">
 </head>
 <body>
 <header class="app-header">
   <div class="app-header-inner">
     <div class="brand"><div class="logo logo-sm">S</div><span class="brand-name">Sigla Tala</span></div>
-    <div class="lead-admin-header-actions">
-      <span id="leadAdminName">Lead Admin</span>
-      <button class="btn-secondary btn-compact" id="logoutBtn" type="button">Log out</button>
+    <div class="user-menu" id="leadAdminUserMenu">
+      <button class="user-menu-trigger" id="leadAdminMenuTrigger" type="button" aria-haspopup="true" aria-expanded="false">
+        <svg class="icon icon-invert" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="12" cy="8" r="3.4"/><path d="M4.5 20c1.4-3.6 4.4-5.6 7.5-5.6s6.1 2 7.5 5.6"/></svg>
+        <span id="leadAdminName">Lead Admin</span>
+        <svg class="icon icon-invert icon-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+      </button>
+      <div class="user-dropdown hidden" id="leadAdminUserDropdown">
+        <button class="user-dropdown-item item-danger" id="logoutBtn" type="button">Log out</button>
+      </div>
     </div>
   </div>
 </header>
 
-<main class="lead-admin-page">
+<main class="lead-admin-page staff-app-content">
+  <div class="patient-shell staff-dashboard-shell">
+    <aside class="patient-sidebar" aria-label="Lead admin navigation">
+      <div class="patient-sidebar-brand"><div class="logo">S</div><strong>Lead Admin</strong></div>
+      <nav class="patient-nav lead-admin-tabs" role="tablist">
+        <button class="lead-tab active patient-nav-item" data-panel="reportsPanel" role="tab" type="button"><span>▤</span>Reports</button>
+        <button class="lead-tab patient-nav-item" data-panel="assignmentsPanel" role="tab" type="button"><span>⇄</span>Assignments</button>
+        <button class="lead-tab patient-nav-item" data-panel="schedulesPanel" role="tab" type="button"><span>▦</span>Worker schedules</button>
+        <button class="lead-tab patient-nav-item" data-panel="activityPanel" role="tab" type="button"><span>◷</span>Activity log</button>
+      </nav>
+      <div class="patient-sidebar-note"><strong>Operations overview</strong><span>Monitor appointments, schedules, assignments, and staff activity.</span></div>
+    </aside>
+    <div class="patient-main staff-main">
   <div class="lead-admin-title-row">
     <div>
       <p class="eyebrow">Operations overview</p>
       <h1>Lead Admin Dashboard</h1>
       <p class="page-description">Monitor patient appointments, worker schedules, assignments, and staff activity.</p>
     </div>
-  </div>
-
-  <div class="lead-admin-tabs" role="tablist">
-    <button class="lead-tab active" data-panel="reportsPanel" role="tab">Reports</button>
-    <button class="lead-tab" data-panel="assignmentsPanel" role="tab">Assignments</button>
-    <button class="lead-tab" data-panel="schedulesPanel" role="tab">Worker schedules</button>
-    <button class="lead-tab" data-panel="activityPanel" role="tab">Activity log</button>
   </div>
 
   <section id="reportsPanel" class="lead-panel">
@@ -107,6 +120,8 @@
       <div class="table-wrap"><table><thead><tr><th>Time</th><th>Actor</th><th>Action</th><th>Entity</th><th>Details</th></tr></thead><tbody id="activityRows"></tbody></table></div>
     </div>
   </section>
+    </div>
+  </div>
 </main>
 <aside class="detail-drawer hidden" id="appointmentDrawer" aria-hidden="true">
   <div class="drawer-header"><div><p class="eyebrow">Appointment details</p><h2 id="drawerTitle">Patient history</h2></div><button class="drawer-close" id="drawerCloseBtn" type="button" aria-label="Close details">×</button></div>
