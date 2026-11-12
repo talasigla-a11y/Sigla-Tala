@@ -166,7 +166,7 @@ const createAppointment = (req, res) => {
                         });
                     }
 
-                    return res.status(201).json({
+                    const respondWithAppointment = () => res.status(201).json({
                         success: true,
                         message: "Appointment created successfully!",
                         appointment: {
@@ -186,6 +186,18 @@ const createAppointment = (req, res) => {
                             status: "Pending"
                         }
                     });
+
+                    leadAdminModel.logActivity(
+                        user_id,
+                        "appointment_created",
+                        "appointment",
+                        result.insertId,
+                        `Patient booked ${appointment.appointment_type} for ${appointment.appointment_date}`,
+                        (logErr) => {
+                            if (logErr) console.error("ACTIVITY LOG ERROR:", logErr);
+                            respondWithAppointment();
+                        }
+                    );
                 });
             });
         };

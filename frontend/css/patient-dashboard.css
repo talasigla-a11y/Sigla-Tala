@@ -12,10 +12,24 @@
 .patient-main { min-width: 0; }
 .patient-main .view { padding: 0; }
 .patient-main .view-title { margin-top: 0; }
-.patient-main #announcementGrid { gap: 12px; grid-template-columns: minmax(0, 1fr); }
-.patient-main #announcementGrid .announcement-card { align-items: center; column-gap: 18px; display: grid; grid-template-columns: minmax(100px, 0.25fr) minmax(0, 1fr); }
-.patient-main #announcementGrid .announcement-date { grid-row: span 2; margin: 0; }
-.patient-main #announcementGrid .announcement-card h3 { margin-bottom: 4px; }
+.patient-main #announcementGrid { display: block; position: relative; }
+.patient-announcement-slide { display: grid; grid-template-columns: minmax(0, 1fr); min-height: min(62vh, 560px); overflow: hidden; padding: 0; position: relative; }
+.patient-announcement-slide-poster { background: #e8efeb; height: 100%; inset: 0; object-fit: cover; position: absolute; width: 100%; }
+.patient-announcement-slide-placeholder { align-items: center; background: linear-gradient(135deg, #178451, #0c5337); color: #fff; display: flex; font-size: clamp(32px, 6vw, 72px); font-weight: 800; inset: 0; justify-content: center; position: absolute; }
+.patient-announcement-slide-content { align-self: end; background: linear-gradient(transparent, rgba(12, 24, 18, .9)); color: #fff; padding: 90px 28px 28px; position: relative; z-index: 1; }
+.patient-announcement-slide-content .announcement-date { color: #e0e8e3; margin: 0 0 8px; }
+.patient-announcement-slide-content h3 { color: #fff; font-size: clamp(22px, 3vw, 34px); margin: 0 0 8px; }
+.patient-announcement-slide-content > p:not(.announcement-date) { color: #f2f5f3; font-size: 15px; line-height: 1.5; margin: 0 0 16px; max-width: 720px; white-space: pre-wrap; }
+.patient-announcement-slide-content .announcement-view-btn { background: #fff; }
+.patient-announcement-controls { align-items: center; background: rgba(15, 23, 42, .65); border-radius: 28px; bottom: 18px; display: flex; gap: 14px; left: 50%; padding: 5px 8px; position: absolute; transform: translateX(-50%); z-index: 2; }
+.patient-announcement-controls button { background: transparent; border: 0; color: #fff; font-size: 30px; height: 42px; line-height: 1; width: 38px; }
+.patient-announcement-controls button:hover { color: #c9efda; }
+.patient-announcement-controls span { color: #fff; font-size: 12px; min-width: 38px; text-align: center; }
+.patient-announcement-modal-card { max-height: min(90vh, 900px); overflow-y: auto; }
+.patient-announcement-modal-card .panel-subtitle { margin: 0 30px 16px 0; }
+.patient-announcement-poster { display: block; margin: 0 auto 16px; max-height: 65vh; max-width: 100%; object-fit: contain; }
+.patient-announcement-content { color: var(--text-muted); line-height: 1.6; margin: 0; white-space: pre-wrap; }
+.patient-appointments-widget #appointmentsList { max-height: min(60vh, 620px); overflow-y: auto; overscroll-behavior: contain; scrollbar-gutter: stable; }
 .appointment-workspace { align-items: start; display: block; }
 .appointment-workspace .appointment-booking-pane { min-width: 0; }
 .appointment-booking-pane .appointment-layout { display: block; }
@@ -53,4 +67,4 @@
 .patient-help-card { background: #e8f6ed; border-color: #cce8d5; }
 .patient-help-card p { color: var(--text-muted); font-size: 12px; line-height: 1.45; margin: 8px 0 0; }
 @media (max-width: 1100px) { .patient-shell { grid-template-columns: 190px minmax(0, 1fr); } .patient-rightbar { grid-column: 2; grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-@media (max-width: 760px) { .patient-shell { display: block; } .patient-sidebar { margin-bottom: 16px; min-height: 0; } .patient-nav { grid-template-columns: repeat(3, 1fr); } .patient-nav-item { justify-content: center; padding: 9px 5px; } .patient-sidebar-note { display: none; } .patient-rightbar { display: grid; grid-template-columns: 1fr; margin-top: 20px; } .patient-logout { margin-top: 0; } .patient-main #announcementGrid .announcement-card { align-items: start; grid-template-columns: 1fr; row-gap: 6px; } .patient-main #announcementGrid .announcement-date { grid-row: auto; } }
+@media (max-width: 760px) { .patient-shell { display: block; } .patient-sidebar { margin-bottom: 16px; min-height: 0; } .patient-nav { grid-template-columns: repeat(3, 1fr); } .patient-nav-item { justify-content: center; padding: 9px 5px; } .patient-sidebar-note { display: none; } .patient-rightbar { display: grid; grid-template-columns: 1fr; margin-top: 20px; } .patient-logout { margin-top: 0; } .patient-announcement-slide { min-height: 55vh; } .patient-announcement-slide-content { padding: 70px 18px 78px; } }

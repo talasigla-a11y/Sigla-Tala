@@ -77,6 +77,11 @@ const toast =
 const announcementGrid =
     document.getElementById("announcementGrid");
 
+const patientAnnouncementModal = document.getElementById("patientAnnouncementModal");
+const patientAnnouncementClose = document.getElementById("patientAnnouncementClose");
+let patientAnnouncements = [];
+let patientAnnouncementIndex = 0;
+
 
 
 const dashboardView =
@@ -392,27 +397,83 @@ async function loadAnnouncements() {
             throw new Error(data.message || "Unable to load announcements.");
         }
 
-        const announcements = data.announcements || [];
+        patientAnnouncements = data.announcements || [];
 
-        if (!announcements.length) {
+        if (!patientAnnouncements.length) {
             announcementGrid.innerHTML = `<p class="empty-state">No announcements posted yet.</p>`;
             return;
         }
 
-        announcementGrid.innerHTML = announcements.map((announcement) => `
-            <article class="announcement-card">
-                <div class="announcement-date">
-                    ${escapeHTML(new Date(announcement.created_at).toLocaleDateString())}
-                </div>
-                <h3>${escapeHTML(announcement.title)}</h3>
-                <p>${escapeHTML(announcement.content)}</p>
-            </article>
-        `).join("");
+        patientAnnouncementIndex = Math.min(patientAnnouncementIndex, patientAnnouncements.length - 1);
+        renderPatientAnnouncement();
     } catch (error) {
         console.error("ANNOUNCEMENT LOAD ERROR:", error);
         announcementGrid.innerHTML = `<p class="empty-state">Unable to load announcements.</p>`;
     }
 }
+
+function renderPatientAnnouncement() {
+    const announcement = patientAnnouncements[patientAnnouncementIndex];
+    if (!announcement) return;
+
+    announcementGrid.innerHTML = `
+        <article class="announcement-card patient-announcement-slide">
+            ${announcement.has_poster
+                ? `<img class="patient-announcement-slide-poster" src="${API_BASE_URL}/api/announcements/${encodeURIComponent(announcement.id)}/poster" alt="Poster for ${escapeHTML(announcement.title)}">`
+                : `<div class="patient-announcement-slide-placeholder" aria-hidden="true">Sigla Tala</div>`}
+            <div class="patient-announcement-slide-content">
+                <p class="announcement-date">${escapeHTML(new Date(announcement.created_at).toLocaleDateString())}</p>
+                <h3>${escapeHTML(announcement.title)}</h3>
+                <p>${escapeHTML(announcement.content || (announcement.has_poster ? "View the announcement poster." : ""))}</p>
+                <button type="button" class="btn-secondary btn-compact announcement-view-btn">View announcement</button>
+            </div>
+        </article>
+        <div class="patient-announcement-controls" aria-label="Announcement navigation">
+            <button type="button" class="patient-announcement-prev" aria-label="Previous announcement">‹</button>
+            <span aria-live="polite">${patientAnnouncementIndex + 1} / ${patientAnnouncements.length}</span>
+            <button type="button" class="patient-announcement-next" aria-label="Next announcement">›</button>
+        </div>`;
+
+    announcementGrid.querySelector(".announcement-view-btn").addEventListener("click", () => openPatientAnnouncement(announcement));
+    announcementGrid.querySelector(".patient-announcement-prev").addEventListener("click", () => {
+        patientAnnouncementIndex = (patientAnnouncementIndex - 1 + patientAnnouncements.length) % patientAnnouncements.length;
+        renderPatientAnnouncement();
+    });
+    announcementGrid.querySelector(".patient-announcement-next").addEventListener("click", () => {
+        patientAnnouncementIndex = (patientAnnouncementIndex + 1) % patientAnnouncements.length;
+        renderPatientAnnouncement();
+    });
+}
+
+function openPatientAnnouncement(announcement) {
+    document.getElementById("patientAnnouncementTitle").textContent = announcement.title || "Announcement";
+    document.getElementById("patientAnnouncementDate").textContent = new Date(announcement.created_at).toLocaleDateString();
+    document.getElementById("patientAnnouncementContent").textContent = announcement.content || "";
+    const poster = document.getElementById("patientAnnouncementPoster");
+    if (announcement.has_poster) {
+        poster.src = `${API_BASE_URL}/api/announcements/${encodeURIComponent(announcement.id)}/poster`;
+        poster.classList.remove("hidden");
+    } else {
+        poster.removeAttribute("src");
+        poster.classList.add("hidden");
+    }
+    patientAnnouncementModal.classList.remove("hidden");
+    patientAnnouncementModal.setAttribute("aria-hidden", "false");
+    patientAnnouncementClose.focus();
+}
+
+function closePatientAnnouncement() {
+    patientAnnouncementModal.classList.add("hidden");
+    patientAnnouncementModal.setAttribute("aria-hidden", "true");
+}
+
+patientAnnouncementClose.addEventListener("click", closePatientAnnouncement);
+patientAnnouncementModal.addEventListener("click", (event) => {
+    if (event.target === patientAnnouncementModal) closePatientAnnouncement();
+});
+document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && !patientAnnouncementModal.classList.contains("hidden")) closePatientAnnouncement();
+});
 
 
 

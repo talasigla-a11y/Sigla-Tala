@@ -6,7 +6,7 @@
 <title>Sigla Tala — Lead Admin Dashboard</title>
 <link rel="stylesheet" href="../css/styles.css">
 <link rel="stylesheet" href="../css/patient-dashboard.css">
-<link rel="stylesheet" href="../css/lead-admin-dashboard.css?v=20261111-planner-4">
+<link rel="stylesheet" href="../css/lead-admin-dashboard.css?v=20261113-filters-dates-4">
 <link rel="stylesheet" href="../css/staff-dashboard.css">
 </head>
 <body>
@@ -61,7 +61,7 @@
         </div>
         <label class="filter-group" for="statusFilter">Status<select id="statusFilter"><option value="">All statuses</option><option>Pending</option><option>Accepted</option><option>Rejected</option><option>Completed</option><option>Cancelled</option></select></label>
         <label class="filter-group" for="workerFilter">Worker<select id="workerFilter"><option value="">All workers</option></select></label>
-        <label class="filter-group" for="categoryFilter">Category<select id="categoryFilter"><option value="">All categories</option></select></label>
+        <label class="filter-group" for="categoryFilter">Appointment type<select id="categoryFilter"><option value="">All appointment types</option></select></label>
         <div class="filter-actions">
           <button class="btn-primary btn-compact" id="refreshBtn" type="button">Apply filters</button>
           <button class="btn-secondary btn-compact" id="exportBtn" type="button">Export Excel</button>
@@ -96,20 +96,27 @@
   </section>
 
   <section id="assignmentsPanel" class="lead-panel hidden">
-    <div class="lead-card"><div class="card-heading"><h2>Assign appointments to workers</h2><button class="btn-secondary btn-compact" id="reloadAssignmentsBtn" type="button">Refresh</button></div>
-      <div class="table-wrap"><table><thead><tr><th>Date</th><th>Patient</th><th>Category</th><th>Current worker</th><th>Assign to</th></tr></thead><tbody id="assignmentRows"></tbody></table></div>
+    <div class="lead-card">
+      <div class="card-heading">
+        <div><h2>Worker appointments</h2><p class="field-hint">The responsible worker is determined by the worker schedule for the appointment date and type.</p></div>
+        <div class="assignment-toolbar"><input id="assignmentSearch" type="search" placeholder="Search patient, appointment type, or worker"><button class="btn-secondary btn-compact" id="reloadAssignmentsBtn" type="button">Refresh</button></div>
+      </div>
+      <div class="table-wrap"><table><thead><tr><th>Date</th><th>Patient</th><th>Appointment type</th><th>Responsible worker</th></tr></thead><tbody id="assignmentRows"></tbody></table></div>
     </div>
   </section>
 
   <section id="schedulesPanel" class="lead-panel hidden">
-    <div class="lead-card schedule-planner-card">
+    <div class="lead-card schedule-planner-card" id="schedulePlannerCard">
       <div class="card-heading">
         <div><h2>Worker Schedule Calendar</h2><p class="field-hint">Choose a date to see which workers are assigned that day.</p></div>
         <div class="schedule-planner-actions">
           <button class="btn-secondary btn-compact" id="plannerTodayBtn" type="button">Today</button>
+          <button class="btn-secondary btn-compact" id="toggleMultiDateBtn" type="button" aria-pressed="false">Select multiple dates</button>
+          <button class="btn-secondary btn-compact" id="clearSelectedDatesBtn" type="button">Clear dates</button>
           <button class="btn-secondary btn-compact" id="printScheduleBtn" type="button">Print selected date</button>
         </div>
       </div>
+      <p class="schedule-multi-date-hint" id="multiDateHint" aria-live="polite">Select a date on the calendar to see that day’s schedule.</p>
       <div class="schedule-planner-layout">
         <div class="schedule-month-view">
           <div class="schedule-calendar-toolbar">
@@ -129,9 +136,10 @@
     </div>
     <div class="lead-card schedule-form-card">
       <div class="card-heading"><div><h2 id="scheduleFormTitle">Set worker schedule</h2><p class="field-hint">Morning shifts are limited to 7:00 AM–5:00 PM.</p></div><button class="btn-secondary btn-compact hidden" id="cancelScheduleEditBtn" type="button">Cancel edit</button></div>
+      <p class="field-hint schedule-date-selection-summary">Selected dates: <strong id="scheduleDatesSummary"></strong></p>
       <form id="scheduleForm" class="schedule-form">
         <label>Worker<select id="scheduleWorker" required></select></label>
-        <label>Date<input id="scheduleDate" type="date" required></label>
+        <input id="scheduleDate" type="hidden">
         <label>Start<input id="scheduleStart" type="time" min="07:00" max="17:00" required><span class="time-template-buttons"><button type="button" class="shift-template" data-start="07:00" data-end="17:00">Morning</button></span></label>
         <label>End<input id="scheduleEnd" type="time" min="07:00" max="17:00" required><span id="timeValidationMessage" class="form-validation-message"></span></label>
         <label class="schedule-notes">Notes<input id="scheduleNotes" maxlength="500"></label>
@@ -148,8 +156,12 @@
   </section>
 
   <section id="activityPanel" class="lead-panel hidden">
-    <div class="lead-card"><div class="card-heading"><h2>Staff activity log</h2><button class="btn-secondary btn-compact" id="reloadActivityBtn" type="button">Refresh</button></div>
-      <div class="table-wrap"><table><thead><tr><th>Time</th><th>Staff member</th><th>Role</th><th>Action</th><th>Entity</th><th>Details</th></tr></thead><tbody id="activityRows"></tbody></table></div>
+    <div class="lead-card">
+      <div class="card-heading">
+        <div><h2>Activity log</h2><p class="field-hint">Filter activity by role and patient or staff member.</p></div>
+        <div class="activity-filters"><label class="filter-group" for="activityRoleFilter">Role<select id="activityRoleFilter"><option value="">All roles</option></select></label><label class="filter-group" for="activityNameFilter">Patient or staff name<input id="activityNameFilter" type="search" placeholder="Search patient or staff name"></label><button class="btn-secondary btn-compact" id="reloadActivityBtn" type="button">Refresh</button></div>
+      </div>
+      <div class="table-wrap"><table><thead><tr><th>Time</th><th>Patient or staff member</th><th>Role</th><th>Action</th><th>Entity</th><th>Details</th></tr></thead><tbody id="activityRows"></tbody></table></div>
     </div>
   </section>
     </div>
@@ -162,6 +174,6 @@
 </aside>
 <div class="drawer-backdrop hidden" id="drawerBackdrop"></div>
 <div class="toast" id="toast" role="status"></div>
-<script src="../js/lead-admin-dashboard.js?v=20261111-planner-4"></script>
+<script src="../js/lead-admin-dashboard.js?v=20261113-filters-dates-7"></script>
 </body>
 </html>

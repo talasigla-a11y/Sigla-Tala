@@ -79,7 +79,7 @@ const getReport = (from, to, callback) => {
         ORDER BY patients DESC, total DESC, category
     `;
     const appointmentsSql = `
-        SELECT a.id, a.appointment_date AS date, a.time_preference, a.appointment_type AS category,
+        SELECT a.id, a.user_id, a.appointment_date AS date, a.time_preference, a.appointment_type AS category,
                a.status, p.fullname AS patient_name, w.fullname AS worker_name
         FROM appointments a
         LEFT JOIN users p ON p.id = a.user_id

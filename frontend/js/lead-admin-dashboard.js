@@ -9,8 +9,13 @@ let schedules = [];
 let editingScheduleId = null;
 let schedulePlannerDate = new Date();
 let selectedScheduleDate = new Date();
+let selectedScheduleDates = new Set();
+let multiDateSelectMode = false;
+let assignmentAppointments = [];
+let activityLogs = [];
 const MORNING_START = "07:00";
 const MORNING_END = "17:00";
+const ACTIVITY_ROLES = ["patient", "worker", "admin", "lead-admin"];
 let reportPage = 1;
 const reportPageSize = 10;
 let toastTimer;
@@ -102,7 +107,7 @@ function formatDateTime(value) {
 
 function renderBars(elementId, records, labelKey) {
     const element = document.getElementById(elementId);
-    if (!records.length) { element.innerHTML = "<p class='field-hint'>No data for this date range.</p>"; return; }
+    if (!records.length) { element.innerHTML = "<p class='field-hint'>No data matches the selected filters.</p>"; return; }
     const valueKey = labelKey === "category" ? "patients" : "total";
     const max = Math.max(...records.map((record) => Number(record[valueKey] || 0)), 1);
     const scaleStep = Math.max(1, Math.ceil(max / 4));
@@ -131,15 +136,43 @@ function statusMarkup(status) {
 
 function renderReport(report) {
     reportData = report;
-    const summary = report.summary || {};
-    document.getElementById("totalAppointments").textContent = Number(summary.total_appointments || 0);
-    document.getElementById("uniquePatients").textContent = Number(summary.unique_patients || 0);
-    document.getElementById("acceptedAppointments").textContent = Number(summary.accepted || 0);
-    document.getElementById("rejectedAppointments").textContent = Number(summary.rejected || 0);
     populateReportFilters();
-    renderBars("dailyChart", report.daily || [], "date");
-    renderBars("categoryChart", report.categories || [], "category");
-    const categories = report.categories || [];
+    reportPage = 1;
+    renderReportAnalytics();
+    renderReportTable();
+}
+
+function renderReportAnalytics() {
+    const appointments = filteredReportAppointments(false);
+    const uniquePatients = new Set(appointments.map((item) => item.user_id || item.patient_name).filter(Boolean));
+    const accepted = appointments.filter((item) => String(item.status || "").toLowerCase() === "accepted").length;
+    const rejected = appointments.filter((item) => String(item.status || "").toLowerCase() === "rejected").length;
+    document.getElementById("totalAppointments").textContent = appointments.length;
+    document.getElementById("uniquePatients").textContent = uniquePatients.size;
+    document.getElementById("acceptedAppointments").textContent = accepted;
+    document.getElementById("rejectedAppointments").textContent = rejected;
+
+    const byDate = new Map();
+    const byAppointmentType = new Map();
+    appointments.forEach((appointment) => {
+        const date = normalizeDate(appointment.date);
+        const type = appointment.category || "Unspecified";
+        byDate.set(date, (byDate.get(date) || 0) + 1);
+        if (!byAppointmentType.has(type)) {
+            byAppointmentType.set(type, { category: type, total: 0, patientIds: new Set() });
+        }
+        const stats = byAppointmentType.get(type);
+        stats.total += 1;
+        const patientKey = appointment.user_id || appointment.patient_name;
+        if (patientKey) stats.patientIds.add(patientKey);
+    });
+    const daily = [...byDate.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([date, total]) => ({ date, total }));
+    const categories = [...byAppointmentType.values()]
+        .map(({ category, total, patientIds }) => ({ category, total, patients: patientIds.size }))
+        .sort((a, b) => b.patients - a.patients || b.total - a.total || a.category.localeCompare(b.category));
+    renderBars("dailyChart", daily, "date");
+    renderBars("categoryChart", categories, "category");
+
     const totalPatients = categories.reduce((sum, category) => sum + Number(category.patients || 0), 0);
     document.getElementById("categoryRows").innerHTML = categories.length
         ? categories.map((category) => {
@@ -148,9 +181,7 @@ function renderReport(report) {
             return `<tr><td>${escapeHtml(category.category)}</td><td><strong>${patients}</strong></td><td>${Number(category.total || 0)}</td><td>${share}</td></tr>`;
         }).join("")
         : emptyRow(4);
-    document.getElementById("categoryStatus").textContent = `${categories.length} categor${categories.length === 1 ? "y" : "ies"}`;
-    reportPage = 1;
-    renderReportTable();
+    document.getElementById("categoryStatus").textContent = `${categories.length} appointment type${categories.length === 1 ? "" : "s"}`;
 }
 
 function populateReportFilters() {
@@ -161,16 +192,16 @@ function populateReportFilters() {
     const workersInReport = [...new Set(reportData.appointments.map((item) => item.worker_name).filter(Boolean))].sort();
     const categoriesInReport = [...new Set(reportData.appointments.map((item) => item.category).filter(Boolean))].sort();
     worker.innerHTML = `<option value="">All workers</option>${workersInReport.map((item) => `<option>${escapeHtml(item)}</option>`).join("")}`;
-    category.innerHTML = `<option value="">All categories</option>${categoriesInReport.map((item) => `<option>${escapeHtml(item)}</option>`).join("")}`;
+    category.innerHTML = `<option value="">All appointment types</option>${categoriesInReport.map((item) => `<option>${escapeHtml(item)}</option>`).join("")}`;
     worker.value = workersInReport.includes(workerValue) ? workerValue : "";
     category.value = categoriesInReport.includes(categoryValue) ? categoryValue : "";
 }
 
-function filteredReportAppointments() {
+function filteredReportAppointments(includeSearch = true) {
     const status = document.getElementById("statusFilter").value;
     const worker = document.getElementById("workerFilter").value;
     const category = document.getElementById("categoryFilter").value;
-    const search = document.getElementById("reportSearch").value.trim().toLowerCase();
+    const search = includeSearch ? document.getElementById("reportSearch").value.trim().toLowerCase() : "";
     return reportData.appointments.filter((item) => {
         const searchable = `${item.patient_name || ""} ${item.worker_name || ""} ${item.category || ""}`.toLowerCase();
         return (!status || item.status === status) &&
@@ -248,20 +279,20 @@ async function loadWorkers() {
 async function loadAssignments() {
     try {
         const data = await request(`/report${rangeQuery()}`);
-        const rows = data.appointments || [];
-        document.getElementById("assignmentRows").innerHTML = rows.length ? rows.map((appointment) => `<tr><td>${escapeHtml(formatDateOnly(appointment.date))}</td><td>${escapeHtml(appointment.patient_name)}</td><td>${escapeHtml(appointment.category)}</td><td>${escapeHtml(appointment.worker_name || "Unassigned")}</td><td><select class="assignment-select" data-id="${appointment.id}"><option value="">Select worker</option>${workers.map((worker) => `<option value="${worker.id}" ${worker.fullname === appointment.worker_name ? "selected" : ""}>${escapeHtml(worker.fullname)}</option>`).join("")}</select></td></tr>`).join("") : emptyRow(5);
-        document.querySelectorAll(".assignment-select").forEach((select) => select.addEventListener("change", assignAppointment));
+        assignmentAppointments = data.appointments || [];
+        renderAssignments();
     } catch (error) { showToast(error.message, "error"); }
 }
 
-async function assignAppointment(event) {
-    if (!event.target.value) return;
-    try {
-        await request("/appointments/assign", { method: "PUT", body: JSON.stringify({ appointmentId: event.target.dataset.id, workerId: event.target.value }) });
-        showToast("Appointment assigned.");
-        await loadReport();
-        await loadAssignments();
-    } catch (error) { showToast(error.message, "error"); }
+function renderAssignments() {
+    const query = document.getElementById("assignmentSearch").value.trim().toLowerCase();
+    const filtered = assignmentAppointments.filter((appointment) => {
+        const searchable = `${appointment.patient_name || ""} ${appointment.category || ""} ${appointment.worker_name || ""}`.toLowerCase();
+        return !query || searchable.includes(query);
+    });
+    document.getElementById("assignmentRows").innerHTML = filtered.length
+        ? filtered.map((appointment) => `<tr><td>${escapeHtml(formatDateOnly(appointment.date))}</td><td>${escapeHtml(appointment.patient_name || "—")}</td><td>${escapeHtml(appointment.category || "—")}</td><td>${escapeHtml(appointment.worker_name || "Unassigned")}</td></tr>`).join("")
+        : emptyRow(4, "No appointments match the current search.");
 }
 
 async function loadSchedules() {
@@ -316,7 +347,6 @@ function renderScheduleCalendar() {
     }
 
     const todayKey = scheduleDateKey(new Date());
-    const selectedKey = scheduleDateKey(selectedScheduleDate);
     for (let day = 1; day <= daysInMonth; day += 1) {
         const date = new Date(year, month, day);
         const key = scheduleDateKey(date);
@@ -324,7 +354,8 @@ function renderScheduleCalendar() {
         const button = document.createElement("button");
         button.type = "button";
         button.className = "schedule-calendar-day";
-        button.classList.toggle("selected", key === selectedKey);
+        button.classList.toggle("selected", selectedScheduleDates.has(key));
+        button.classList.toggle("multi-selected", multiDateSelectMode && selectedScheduleDates.has(key));
         button.classList.toggle("today", key === todayKey);
         button.classList.toggle("has-schedules", count > 0);
         button.setAttribute("aria-label", `${scheduleLabelDate(key)}${count ? `, ${count} worker${count === 1 ? "" : "s"} scheduled` : ", no workers scheduled"}`);
@@ -338,11 +369,31 @@ function selectScheduleDate(date) {
     selectedScheduleDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
     schedulePlannerDate = new Date(date.getFullYear(), date.getMonth(), 1);
     const key = scheduleDateKey(selectedScheduleDate);
-    document.getElementById("scheduleDate").value = key;
+    if (multiDateSelectMode) {
+        if (selectedScheduleDates.has(key)) selectedScheduleDates.delete(key);
+        else selectedScheduleDates.add(key);
+    } else {
+        selectedScheduleDates = new Set([key]);
+    }
+    updateScheduleDateSelection();
     document.getElementById("scheduleDateFilter").value = "";
     renderScheduleCalendar();
     renderSelectedDateSchedules();
     renderSchedules();
+}
+
+function updateScheduleDateSelection() {
+    const dates = [...selectedScheduleDates].sort();
+    document.getElementById("scheduleDate").value = dates[0] || "";
+    document.getElementById("scheduleDatesSummary").textContent = dates.length
+        ? dates.map((date) => scheduleLabelDate(date, { month: "short", day: "numeric", year: "numeric" })).join(", ")
+        : "None — select date(s) in the calendar";
+    document.getElementById("multiDateHint").textContent = multiDateSelectMode
+        ? `${dates.length} date${dates.length === 1 ? "" : "s"} selected. Click calendar dates to add or remove them; click “Select multiple dates” again when done.`
+        : dates.length > 1
+            ? `${dates.length} dates selected for the schedule form. Use “Clear dates” to start over.`
+            : "Select a date to view its schedule. Turn on “Select multiple dates” to assign a worker to several dates at once.";
+    document.getElementById("schedulePlannerCard").classList.toggle("multi-date-mode", multiDateSelectMode);
 }
 
 function scheduleActionButtons(schedule) {
@@ -492,6 +543,9 @@ function beginScheduleEdit(scheduleId) {
     editingScheduleId = scheduleId;
     document.getElementById("scheduleWorker").value = schedule.worker_id;
     document.getElementById("scheduleDate").value = String(schedule.schedule_date).slice(0, 10);
+    multiDateSelectMode = false;
+    document.getElementById("toggleMultiDateBtn").setAttribute("aria-pressed", "false");
+    document.getElementById("toggleMultiDateBtn").textContent = "Select multiple dates";
     selectScheduleDate(new Date(`${normalizeDate(schedule.schedule_date)}T00:00:00`));
     document.getElementById("scheduleStart").value = String(schedule.start_time).slice(0, 5);
     document.getElementById("scheduleEnd").value = String(schedule.end_time).slice(0, 5);
@@ -505,7 +559,7 @@ function beginScheduleEdit(scheduleId) {
 function resetScheduleForm() {
     editingScheduleId = null;
     document.getElementById("scheduleForm").reset();
-    document.getElementById("scheduleDate").value = scheduleDateKey(selectedScheduleDate);
+    updateScheduleDateSelection();
     document.getElementById("scheduleFormTitle").textContent = "Set worker schedule";
     document.getElementById("cancelScheduleEditBtn").classList.add("hidden");
     document.getElementById("timeValidationMessage").textContent = "";
@@ -543,8 +597,31 @@ function validateScheduleTime() {
 async function loadActivity() {
     try {
         const data = await request(`/activity-logs${rangeQuery()}`);
-        document.getElementById("activityRows").innerHTML = data.logs.length ? data.logs.map((log) => `<tr><td>${escapeHtml(formatDateTime(log.created_at))}</td><td>${escapeHtml(log.actor_name || "System")}</td><td>${escapeHtml(log.actor_role || "System")}</td><td>${escapeHtml(log.action)}</td><td>${escapeHtml(log.entity_type)} #${escapeHtml(log.entity_id || "—")}</td><td>${escapeHtml(log.details || "—")}</td></tr>`).join("") : emptyRow(6);
+        activityLogs = data.logs || [];
+        populateActivityRoleFilter();
+        renderActivityLogs();
     } catch (error) { showToast(error.message, "error"); }
+}
+
+function populateActivityRoleFilter() {
+    const select = document.getElementById("activityRoleFilter");
+    const currentValue = select.value;
+    const roles = ACTIVITY_ROLES;
+    select.innerHTML = `<option value="">All roles</option>${roles.map((item) => `<option value="${escapeHtml(item)}">${escapeHtml(item)}</option>`).join("")}`;
+    select.value = roles.includes(currentValue) ? currentValue : "";
+}
+
+function renderActivityLogs() {
+    const roleFilter = document.getElementById("activityRoleFilter").value.toLowerCase();
+    const nameFilter = document.getElementById("activityNameFilter").value.trim().toLowerCase();
+    const filtered = activityLogs.filter((log) => {
+        const roleName = String(log.actor_role || "System").toLowerCase();
+        const actorName = String(log.actor_name || "System").toLowerCase();
+        return (!roleFilter || roleName === roleFilter) && (!nameFilter || actorName.includes(nameFilter));
+    });
+    document.getElementById("activityRows").innerHTML = filtered.length
+        ? filtered.map((log) => `<tr><td>${escapeHtml(formatDateTime(log.created_at))}</td><td>${escapeHtml(log.actor_name || "System")}</td><td>${escapeHtml(log.actor_role || "System")}</td><td>${escapeHtml(log.action)}</td><td>${escapeHtml(log.entity_type)} #${escapeHtml(log.entity_id || "—")}</td><td>${escapeHtml(log.details || "—")}</td></tr>`).join("")
+        : emptyRow(6, "No activity matches the selected role and name.");
 }
 
 function excelCell(value, header = false) {
@@ -623,8 +700,12 @@ function exportExcel() {
     URL.revokeObjectURL(link.href);
 }
 
-document.getElementById("refreshBtn").addEventListener("click", async () => { await loadReport(); await loadSchedules(); await loadActivity(); });
-["statusFilter", "workerFilter", "categoryFilter"].forEach((id) => document.getElementById(id).addEventListener("change", () => { reportPage = 1; renderReportTable(); }));
+document.getElementById("refreshBtn").addEventListener("click", async () => { await loadReport(); await loadAssignments(); await loadSchedules(); await loadActivity(); });
+["statusFilter", "workerFilter", "categoryFilter"].forEach((id) => document.getElementById(id).addEventListener("change", () => {
+    reportPage = 1;
+    renderReportAnalytics();
+    renderReportTable();
+}));
 document.getElementById("reportSearch").addEventListener("input", () => { reportPage = 1; renderReportTable(); });
 document.getElementById("previousPageBtn").addEventListener("click", () => { reportPage -= 1; renderReportTable(); });
 document.getElementById("nextPageBtn").addEventListener("click", () => { reportPage += 1; renderReportTable(); });
@@ -632,29 +713,26 @@ document.getElementById("drawerCloseBtn").addEventListener("click", closeAppoint
 document.getElementById("drawerBackdrop").addEventListener("click", closeAppointmentDetails);
 document.getElementById("exportBtn").addEventListener("click", exportExcel);
 document.getElementById("reloadAssignmentsBtn").addEventListener("click", loadAssignments);
+document.getElementById("assignmentSearch").addEventListener("input", renderAssignments);
 document.getElementById("reloadActivityBtn").addEventListener("click", loadActivity);
+document.getElementById("activityRoleFilter").addEventListener("change", renderActivityLogs);
+document.getElementById("activityNameFilter").addEventListener("input", renderActivityLogs);
 document.getElementById("scheduleSearch").addEventListener("input", renderSchedules);
 document.getElementById("scheduleSpecialization").addEventListener("change", renderSchedules);
 document.getElementById("scheduleDateFilter").addEventListener("change", renderSchedules);
-document.getElementById("scheduleDate").addEventListener("change", async (event) => {
-    const [year, month, day] = event.target.value.split("-").map(Number);
-    if (!year || !month || !day) return;
-    selectedScheduleDate = new Date(year, month - 1, day);
-    schedulePlannerDate = new Date(year, month - 1, 1);
-    document.getElementById("scheduleDateFilter").value = "";
-    await loadSchedules();
-});
 document.getElementById("scheduleMonthPrev").addEventListener("click", async () => {
     schedulePlannerDate = new Date(schedulePlannerDate.getFullYear(), schedulePlannerDate.getMonth() - 1, 1);
     selectedScheduleDate = new Date(schedulePlannerDate);
-    document.getElementById("scheduleDate").value = scheduleDateKey(selectedScheduleDate);
+    if (!multiDateSelectMode) selectedScheduleDates.clear();
+    updateScheduleDateSelection();
     document.getElementById("scheduleDateFilter").value = "";
     await loadSchedules();
 });
 document.getElementById("scheduleMonthNext").addEventListener("click", async () => {
     schedulePlannerDate = new Date(schedulePlannerDate.getFullYear(), schedulePlannerDate.getMonth() + 1, 1);
     selectedScheduleDate = new Date(schedulePlannerDate);
-    document.getElementById("scheduleDate").value = scheduleDateKey(selectedScheduleDate);
+    if (!multiDateSelectMode) selectedScheduleDates.clear();
+    updateScheduleDateSelection();
     document.getElementById("scheduleDateFilter").value = "";
     await loadSchedules();
 });
@@ -662,9 +740,22 @@ document.getElementById("plannerTodayBtn").addEventListener("click", async () =>
     const now = new Date();
     schedulePlannerDate = new Date(now.getFullYear(), now.getMonth(), 1);
     selectedScheduleDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    document.getElementById("scheduleDate").value = scheduleDateKey(selectedScheduleDate);
+    if (!multiDateSelectMode) selectedScheduleDates.clear();
+    updateScheduleDateSelection();
     document.getElementById("scheduleDateFilter").value = "";
     await loadSchedules();
+});
+document.getElementById("toggleMultiDateBtn").addEventListener("click", (event) => {
+    multiDateSelectMode = !multiDateSelectMode;
+    event.currentTarget.setAttribute("aria-pressed", String(multiDateSelectMode));
+    event.currentTarget.textContent = multiDateSelectMode ? "Done selecting dates" : "Select multiple dates";
+    updateScheduleDateSelection();
+    renderScheduleCalendar();
+});
+document.getElementById("clearSelectedDatesBtn").addEventListener("click", () => {
+    selectedScheduleDates.clear();
+    updateScheduleDateSelection();
+    renderScheduleCalendar();
 });
 document.getElementById("printScheduleBtn").addEventListener("click", printSelectedDateSchedule);
 document.getElementById("scheduleStart").addEventListener("change", validateScheduleTime);
@@ -690,21 +781,69 @@ document.querySelectorAll(".lead-tab").forEach((tab) => tab.addEventListener("cl
 document.getElementById("scheduleForm").addEventListener("submit", async (event) => {
     event.preventDefault();
     if (!validateScheduleTime()) { showToast("Please correct the schedule time.", "error"); return; }
+    const datesToSave = editingScheduleId
+        ? [document.getElementById("scheduleDate").value]
+        : [...selectedScheduleDates].sort();
+    if (!datesToSave.length) {
+        showToast("Select at least one date on the worker schedule calendar.", "error");
+        return;
+    }
+
+    const workerId = document.getElementById("scheduleWorker").value;
+    const startTime = document.getElementById("scheduleStart").value;
+    const endTime = document.getElementById("scheduleEnd").value;
+    const notes = document.getElementById("scheduleNotes").value;
+    const savedDates = [];
+    const failedDates = [];
+    const isEditing = Boolean(editingScheduleId);
+
     try {
-        const schedule = { scheduleId: editingScheduleId, workerId: document.getElementById("scheduleWorker").value, scheduleDate: document.getElementById("scheduleDate").value, startTime: document.getElementById("scheduleStart").value, endTime: document.getElementById("scheduleEnd").value, notes: document.getElementById("scheduleNotes").value };
-        await request("/schedules", { method: editingScheduleId ? "PUT" : "POST", body: JSON.stringify(schedule) });
-        const [year, month, day] = schedule.scheduleDate.split("-").map(Number);
-        selectedScheduleDate = new Date(year, month - 1, day);
-        schedulePlannerDate = new Date(year, month - 1, 1);
-        showToast("Worker schedule saved.");
-        resetScheduleForm();
+        for (const scheduleDate of datesToSave) {
+            const schedule = {
+                scheduleId: isEditing ? editingScheduleId : null,
+                workerId,
+                scheduleDate,
+                startTime,
+                endTime,
+                notes
+            };
+            try {
+                await request("/schedules", { method: isEditing ? "PUT" : "POST", body: JSON.stringify(schedule) });
+                savedDates.push(scheduleDate);
+            } catch (error) {
+                failedDates.push({ date: scheduleDate, message: error.message });
+                if (isEditing) break;
+            }
+        }
+
+        if (savedDates.length) {
+            const lastSavedDate = savedDates[savedDates.length - 1];
+            const [year, month, day] = lastSavedDate.split("-").map(Number);
+            selectedScheduleDate = new Date(year, month - 1, day);
+            schedulePlannerDate = new Date(year, month - 1, 1);
+            if (!failedDates.length) {
+                selectedScheduleDates = new Set([lastSavedDate]);
+                multiDateSelectMode = false;
+                document.getElementById("toggleMultiDateBtn").setAttribute("aria-pressed", "false");
+                document.getElementById("toggleMultiDateBtn").textContent = "Select multiple dates";
+                resetScheduleForm();
+            }
+        }
+
+        updateScheduleDateSelection();
         await loadSchedules();
+        if (failedDates.length) {
+            const failures = failedDates.map((item) => `${scheduleLabelDate(item.date, { month: "short", day: "numeric" })}: ${item.message}`).join("; ");
+            showToast(`${savedDates.length} saved; ${failedDates.length} failed. ${failures}`, "error");
+        } else {
+            showToast(isEditing ? "Worker schedule updated." : `${savedDates.length} worker schedule${savedDates.length === 1 ? "" : "s"} saved.`);
+        }
     } catch (error) {
         showToast(error.message, "error");
-        await loadSchedules();
     }
 });
 
+updateScheduleDateSelection();
 renderScheduleCalendar();
 renderSelectedDateSchedules();
 loadWorkers();

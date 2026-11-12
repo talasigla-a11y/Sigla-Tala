@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Sigla Tala — Health Worker Portal</title>
 <link rel="stylesheet" href="../css/styles.css">
-<link rel="stylesheet" href="../css/patient-dashboard.css">
-<link rel="stylesheet" href="../css/staff-dashboard.css">
+<link rel="stylesheet" href="../css/patient-dashboard.css?v=20261113-announcement-poster-1">
+<link rel="stylesheet" href="../css/staff-dashboard.css?v=20261113-announcement-poster-1">
 </head>
 <body class="app-active">
  
@@ -75,8 +75,14 @@
             </div>
             <div class="field">
               <label for="annContent">Content</label>
-              <textarea id="annContent" rows="4" required></textarea>
+              <textarea id="annContent" rows="4"></textarea>
               <span class="error-message" id="annContentError"></span>
+            </div>
+            <div class="field">
+              <label for="annPoster">Poster (optional)</label>
+              <input type="file" id="annPoster" accept="image/jpeg,image/png,image/webp">
+              <span class="field-hint">JPG, PNG, or WEBP; maximum 5 MB.</span>
+              <span class="error-message" id="annPosterError"></span>
             </div>
             <div class="form-actions">
               <button type="button" class="btn-secondary" id="cancelAnnouncementBtn">Cancel</button>
@@ -318,6 +324,6 @@
  
   <div class="toast" id="toast"></div>
  
-  <script src="../js/admin-dashboard.js"></script>
+  <script src="../js/admin-dashboard.js?v=20261113-announcement-poster-1"></script>
 </body>
 </html>

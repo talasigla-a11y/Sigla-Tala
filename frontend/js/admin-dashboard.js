@@ -373,6 +373,7 @@ function renderAnnouncements() {
         <div class="announcement-date">${a.date}</div>
         <h3>${a.title}</h3>
         <p>${a.content}</p>
+        ${a.has_poster ? `<img class="admin-announcement-poster" src="${API_BASE_URL}/api/announcements/${encodeURIComponent(a.id)}/poster" alt="Announcement poster">` : ""}
       </article>`
     )
     .join('');
@@ -474,16 +475,23 @@ announcementForm.addEventListener('submit', async (e) => {
   e.preventDefault();
   const titleEl = document.getElementById('annTitle');
   const contentEl = document.getElementById('annContent');
+  const posterEl = document.getElementById('annPoster');
   const titleError = document.getElementById('annTitleError');
   const contentError = document.getElementById('annContentError');
+  const posterError = document.getElementById('annPosterError');
+  const poster = posterEl.files[0];
  
   let valid = true;
   if (!titleEl.value.trim()) {
     setError(titleEl, titleError, 'Title is required.');
     valid = false;
   }
-  if (!contentEl.value.trim()) {
-    setError(contentEl, contentError, 'Content is required.');
+  if (!contentEl.value.trim() && !poster) {
+    setError(contentEl, contentError, 'Enter announcement text or add a poster.');
+    valid = false;
+  }
+  if (poster && (!['image/jpeg', 'image/png', 'image/webp'].includes(poster.type) || poster.size > 5 * 1024 * 1024)) {
+    setError(posterEl, posterError, 'Choose a JPG, PNG, or WEBP poster no larger than 5 MB.');
     valid = false;
   }
   if (!valid) return;
@@ -495,16 +503,17 @@ announcementForm.addEventListener('submit', async (e) => {
     if (!token || isDemoMode) {
       throw new Error('Sign in as a health worker to post announcements.');
     }
+    const body = new FormData();
+    body.append('title', titleEl.value.trim());
+    body.append('content', contentEl.value.trim());
+    if (poster) body.append('poster', poster);
+
     const response = await fetch(`${API_BASE_URL}/api/announcements`, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
         Authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify({
-        title: titleEl.value.trim(),
-        content: contentEl.value.trim(),
-      }),
+      body,
     });
     const data = await response.json();
 
